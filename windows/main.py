@@ -51,6 +51,16 @@ class MainWindow:
         # set viewport size relative to the world
         self._window_size = MainWindow.VIEWPORT_SIZE
 
+        # create tree view that shows object names
+        self._store = Gtk.ListStore(str)
+        self._builder.get_object("object_tree").set_model(self._store)
+        self._builder.get_object("object_tree").append_column(
+            Gtk.TreeViewColumn("Name", Gtk.CellRendererText(), text=0))
+
+        # add object names to tree view
+        for obj in self._world.objects:
+            self._store.append([obj.name])
+
     def show(self):
         self._builder.get_object("main_window").show_all()
 
@@ -114,14 +124,15 @@ class MainWindow:
             Prompts the user for a list of coordinates and builds the wireframe
             object on those points.
         """
-        dialog = EntryDialog("Enter the coordinates", "0,0;50,0;50,50")
-        entry, wrap = dialog.run()
-        dialog.destroy()
-
-        if entry is not None:
+        dialog = EntryDialog(
+            self._builder.get_object("main_window"),
+            "Enter the coordinates", Object.default_name(), "0,0;50,0;50,50")
+        if dialog.run():
             points = [
                 (int(point[0]), int(point[1])) for point in
-                map(lambda p: p.split(","), entry.split(";"))]
-            if wrap:
+                map(lambda p: p.split(","), dialog.coordinates.split(";"))]
+            if dialog.wrap:
                 points.append(points[0])
-            self._world.add_object(Object(points))
+            self._world.add_object(Object(points, dialog.name))
+            self._store.append([dialog.name])
+        dialog.destroy()

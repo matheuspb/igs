@@ -156,15 +156,17 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">10</property>
                 <child>
-                  <object class="GtkTextView">
+                  <object class="GtkTreeView" id="object_tree">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="editable">False</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection"/>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">True</property>
                     <property name="fill">True</property>
-                    <property name="position">1</property>
+                    <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
