@@ -6,3 +6,6 @@ class World:
     @property
     def objects(self):
         return self._objects
+
+    def add_object(self, obj):
+        self._objects.add(obj)

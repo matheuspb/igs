@@ -3,6 +3,7 @@ import numpy as np
 
 from models.object import Object
 from models.world import World
+from .dialog import EntryDialog
 
 
 class MainWindow:
@@ -30,6 +31,9 @@ class MainWindow:
             "on_button_right_clicked": lambda _: self._move_window(1, 0),
             "on_zoom_in": lambda _: self._zoom(True),
             "on_zoom_out": lambda _: self._zoom(False),
+            # menu bar buttons
+            "on_menu_bar_quit": Gtk.main_quit,
+            "on_create_wireframe": self._create_wireframe,
         }
         self._builder.connect_signals(handlers)
         self._builder.get_object("viewport").set_size_request(
@@ -100,3 +104,16 @@ class MainWindow:
         factor = (1 - step/100)**(1 if zoom_in else -1)
         self._window_size = np.multiply(self._window_size, (factor, factor))
         self._builder.get_object("viewport").queue_draw()
+
+    def _create_wireframe(self, _):
+        dialog = EntryDialog("Enter the coordinates", "0,0;50,0;50,50")
+        entry = dialog.run()
+        dialog.destroy()
+
+        if entry is not None:
+            points = [
+                (int(point[0]), int(point[1])) for point in
+                map(lambda p: p.split(","), entry.split(";"))]
+
+            self._world.add_object(Object(points + points[:1]))
+            self._builder.get_object("viewport").queue_draw()
