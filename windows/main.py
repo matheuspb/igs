@@ -87,25 +87,33 @@ class MainWindow:
                 ctx.line_to(*point)
         ctx.stroke()
 
+    def _needs_redraw(func):
+        """ Decorates functions that need to redraw to make effect """
+        def wrapper(self, *args, **kwargs):
+            func(self, *args, **kwargs)
+            self._builder.get_object("viewport").queue_draw()
+        return wrapper
+
+    @_needs_redraw
     def _move_window(self, x_offset, y_offset):
-        """
-            Move the window by moving its center position.
-        """
+        """ Move the window by moving its center position. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         self._position = np.add(self._position, (x_offset*step, y_offset*step))
-        self._builder.get_object("viewport").queue_draw()
 
+    @_needs_redraw
     def _zoom(self, zoom_in):
-        """
-            Zoom in or out by scaling the window size.
-        """
+        """ Zoom in or out by scaling the window size. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         # if zoom_in is True, reduce the window by a factor of 100 - step %
         factor = (1 - step/100)**(1 if zoom_in else -1)
         self._window_size = np.multiply(self._window_size, (factor, factor))
-        self._builder.get_object("viewport").queue_draw()
 
+    @_needs_redraw
     def _create_wireframe(self, _):
+        """
+            Prompts the user for a list of coordinates and builds the wireframe
+            object on those points.
+        """
         dialog = EntryDialog("Enter the coordinates", "0,0;50,0;50,50")
         entry = dialog.run()
         dialog.destroy()
@@ -114,6 +122,4 @@ class MainWindow:
             points = [
                 (int(point[0]), int(point[1])) for point in
                 map(lambda p: p.split(","), entry.split(";"))]
-
             self._world.add_object(Object(points + points[:1]))
-            self._builder.get_object("viewport").queue_draw()

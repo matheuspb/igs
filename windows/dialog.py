@@ -25,18 +25,24 @@ class EntryDialog(Gtk.MessageDialog):
         self.set_size_request(400, 0)
         self.show_all()
 
-    def run(self):
-        while True:
-            try:
-                return self._run()
-            except RuntimeError:
-                warning = Gtk.MessageDialog(
-                    self, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.OK,
-                    "Invalid format for coordinates")
-                warning.run()
-                warning.destroy()
+    def _warning(message):
+        """ Raises a dialog while the inner functions raises a RuntimeError """
+        def decorator(func):
+            def wrapper(self):
+                while True:
+                    try:
+                        return func(self)
+                    except RuntimeError:
+                        dialog = Gtk.MessageDialog(
+                            self, 0, Gtk.MessageType.WARNING,
+                            Gtk.ButtonsType.OK, message)
+                        dialog.run()
+                        dialog.destroy()
+            return wrapper
+        return decorator
 
-    def _run(self):
+    @_warning("Invalid coordinates format")
+    def run(self):
         result = super(EntryDialog, self).run()
         if result == Gtk.ResponseType.OK:
             text = self._entry.get_text()
