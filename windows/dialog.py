@@ -9,10 +9,8 @@ class EntryDialog(Gtk.MessageDialog):
     def __init__(self, text, hint):
         super(EntryDialog, self).__init__()
 
-        # build the label widget with a message
-        label = Gtk.Label()
-        label.set_text(text)
-        self.vbox.pack_start(label, True, True, 0)
+        # build the label widget with the message
+        self.vbox.pack_start(Gtk.Label(text), False, False, 0)
 
         # build entry widget
         self._entry = Gtk.Entry()
@@ -21,6 +19,11 @@ class EntryDialog(Gtk.MessageDialog):
             "activate", lambda ent, dlg, resp: dlg.response(resp), self,
             Gtk.ResponseType.OK)
         self.vbox.pack_start(self._entry, False, False, 0)
+
+        # build the wrap object check box
+        self._check = Gtk.CheckButton("Connect last point to the first one")
+        self._check.set_active(True)
+        self.vbox.pack_start(self._check, False, False, 0)
 
         self.set_size_request(400, 0)
         self.show_all()
@@ -48,5 +51,5 @@ class EntryDialog(Gtk.MessageDialog):
             text = self._entry.get_text()
             if not EntryDialog.COORDINATES_PATTERN.match(text):
                 raise RuntimeError("error")
-            return text
-        return None
+            return text, self._check.get_active()
+        return None, None

@@ -115,11 +115,13 @@ class MainWindow:
             object on those points.
         """
         dialog = EntryDialog("Enter the coordinates", "0,0;50,0;50,50")
-        entry = dialog.run()
+        entry, wrap = dialog.run()
         dialog.destroy()
 
         if entry is not None:
             points = [
                 (int(point[0]), int(point[1])) for point in
                 map(lambda p: p.split(","), entry.split(";"))]
-            self._world.add_object(Object(points + points[:1]))
+            if wrap:
+                points.append(points[0])
+            self._world.add_object(Object(points))
