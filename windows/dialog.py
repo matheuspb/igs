@@ -4,9 +4,9 @@ from gi.repository import Gtk
 
 
 class EntryDialog(Gtk.MessageDialog):
-    """ Prompts the user for a list of coordinates. """
+    """ Prompts the user for a list of points that describe a wireframe. """
 
-    COORDINATES_PATTERN = re.compile(r"(-?\d+,-?\d+;)*-?\d+,-?\d+")
+    POINTS_PATTERN = re.compile(r"^(-?\d+,-?\d+;)*-?\d+,-?\d+$")
 
     class _Decorators:
         @staticmethod
@@ -26,7 +26,7 @@ class EntryDialog(Gtk.MessageDialog):
                 return wrapper
             return decorator
 
-    def __init__(self, parent, text, name_hint, coordinates_hint):
+    def __init__(self, parent, text, name_hint, points_hint):
         super(EntryDialog, self).__init__(
             parent, 0, Gtk.MessageType.QUESTION, (
                 Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -37,10 +37,10 @@ class EntryDialog(Gtk.MessageDialog):
         self._name_entry.set_text(name_hint)
         self.vbox.pack_start(self._name_entry, False, False, 0)
 
-        # build coordinates entry widget
-        self._coordinates_entry = Gtk.Entry()
-        self._coordinates_entry.set_text(coordinates_hint)
-        self.vbox.pack_start(self._coordinates_entry, False, False, 0)
+        # build points entry widget
+        self._points_entry = Gtk.Entry()
+        self._points_entry.set_text(points_hint)
+        self.vbox.pack_start(self._points_entry, False, False, 0)
 
         # build the wrap object check box
         self._check = Gtk.CheckButton("Connect last point to the first one")
@@ -51,13 +51,13 @@ class EntryDialog(Gtk.MessageDialog):
         self.set_size_request(400, 0)
         self.vbox.show_all()
 
-    @_Decorators.warning("Invalid coordinates format")
+    @_Decorators.warning("Invalid points format")
     def run(self):
         """ Runs the dialog. """
         result = super(EntryDialog, self).run()
         if result == Gtk.ResponseType.OK:
-            text = self._coordinates_entry.get_text()
-            if not EntryDialog.COORDINATES_PATTERN.match(text):
+            text = self._points_entry.get_text()
+            if not EntryDialog.POINTS_PATTERN.match(text):
                 raise RuntimeError()
             return True
         return False
@@ -70,7 +70,7 @@ class EntryDialog(Gtk.MessageDialog):
     @property
     def points(self):
         """ Points of the wireframe. """
-        return self._coordinates_entry.get_text()
+        return self._points_entry.get_text()
 
     @property
     def wrap(self):
