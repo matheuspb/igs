@@ -1,3 +1,4 @@
+""" This module contains the main window of the application. """
 from gi.repository import Gtk
 import numpy as np
 
@@ -17,6 +18,15 @@ class MainWindow:
     """
 
     VIEWPORT_SIZE = (500, 500)
+
+    class _Decorators:
+        @staticmethod
+        def needs_redraw(func):
+            """ Decorates methods that need to redraw to take effect. """
+            def wrapper(self, *args, **kwargs):
+                func(self, *args, **kwargs)
+                self._builder.get_object("viewport").queue_draw()
+            return wrapper
 
     def __init__(self):
         # build GTK GUI using glade file
@@ -62,6 +72,7 @@ class MainWindow:
             self._store.append([obj.name])
 
     def show(self):
+        """ Shows all window widgets. """
         self._builder.get_object("main_window").show_all()
 
     def _viewport_transform(self):
@@ -97,20 +108,13 @@ class MainWindow:
                 ctx.line_to(*point)
         ctx.stroke()
 
-    def _needs_redraw(func):
-        """ Decorates functions that need to redraw to make effect """
-        def wrapper(self, *args, **kwargs):
-            func(self, *args, **kwargs)
-            self._builder.get_object("viewport").queue_draw()
-        return wrapper
-
-    @_needs_redraw
+    @_Decorators.needs_redraw
     def _move_window(self, x_offset, y_offset):
         """ Move the window by moving its center position. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         self._position = np.add(self._position, (x_offset*step, y_offset*step))
 
-    @_needs_redraw
+    @_Decorators.needs_redraw
     def _zoom(self, zoom_in):
         """ Zoom in or out by scaling the window size. """
         step = int(self._builder.get_object("move_step_entry").get_text())
@@ -118,7 +122,7 @@ class MainWindow:
         factor = (1 - step/100)**(1 if zoom_in else -1)
         self._window_size = np.multiply(self._window_size, (factor, factor))
 
-    @_needs_redraw
+    @_Decorators.needs_redraw
     def _create_wireframe(self, _):
         """
             Prompts the user for a list of coordinates and builds the wireframe
@@ -130,7 +134,7 @@ class MainWindow:
         if dialog.run():
             points = [
                 (int(point[0]), int(point[1])) for point in
-                map(lambda p: p.split(","), dialog.coordinates.split(";"))]
+                map(lambda p: p.split(","), dialog.points.split(";"))]
             if dialog.wrap:
                 points.append(points[0])
             self._world.add_object(Object(points, dialog.name))

@@ -1,10 +1,30 @@
+""" This module contains a dialog to prompt for user input. """
 import re
 from gi.repository import Gtk
 
 
 class EntryDialog(Gtk.MessageDialog):
+    """ Prompts the user for a list of coordinates. """
 
     COORDINATES_PATTERN = re.compile(r"(-?\d+,-?\d+;)*-?\d+,-?\d+")
+
+    class _Decorators:
+        @staticmethod
+        def warning(message):
+            """ Opens a dialog if the inner function raises a RuntimeError. """
+            def decorator(func):
+                def wrapper(self):
+                    while True:
+                        try:
+                            return func(self)
+                        except RuntimeError:
+                            dialog = Gtk.MessageDialog(
+                                self, 0, Gtk.MessageType.WARNING,
+                                Gtk.ButtonsType.OK, message)
+                            dialog.run()
+                            dialog.destroy()
+                return wrapper
+            return decorator
 
     def __init__(self, parent, text, name_hint, coordinates_hint):
         super(EntryDialog, self).__init__(
@@ -31,40 +51,28 @@ class EntryDialog(Gtk.MessageDialog):
         self.set_size_request(400, 0)
         self.vbox.show_all()
 
-    def _warning(message):
-        """ Raises a dialog while the inner functions raises a RuntimeError """
-        def decorator(func):
-            def wrapper(self):
-                while True:
-                    try:
-                        return func(self)
-                    except RuntimeError:
-                        dialog = Gtk.MessageDialog(
-                            self, 0, Gtk.MessageType.WARNING,
-                            Gtk.ButtonsType.OK, message)
-                        dialog.run()
-                        dialog.destroy()
-            return wrapper
-        return decorator
-
-    @_warning("Invalid coordinates format")
+    @_Decorators.warning("Invalid coordinates format")
     def run(self):
+        """ Runs the dialog. """
         result = super(EntryDialog, self).run()
         if result == Gtk.ResponseType.OK:
             text = self._coordinates_entry.get_text()
             if not EntryDialog.COORDINATES_PATTERN.match(text):
-                raise RuntimeError("error")
+                raise RuntimeError()
             return True
         return False
 
     @property
     def name(self):
+        """ Name of the object. """
         return self._name_entry.get_text()
 
     @property
-    def coordinates(self):
+    def points(self):
+        """ Points of the wireframe. """
         return self._coordinates_entry.get_text()
 
     @property
     def wrap(self):
+        """ Wrap last point to the first one or not. """
         return self._check.get_active()

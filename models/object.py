@@ -1,4 +1,10 @@
+""" This module contains a class that describes an object in the world """
+
 class Object:
+    """
+        Object is a simple wireframe composed of multiple points connected by
+        lines that can be drawn in the viewport.
+    """
 
     TOTAL_OBJECTS = 0
 
@@ -9,12 +15,15 @@ class Object:
 
     @property
     def points(self):
+        """ The points in the wireframe. """
         return self._points
 
     @property
     def name(self):
+        """ Name of the object. """
         return self._name
 
     @staticmethod
     def default_name():
+        """ Default name for new objects. """
         return "object{}".format(Object.TOTAL_OBJECTS + 1)
