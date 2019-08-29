@@ -118,9 +118,18 @@ class MainWindow:
     def _zoom(self, zoom_in):
         """ Zoom in or out by scaling the window size. """
         step = int(self._builder.get_object("move_step_entry").get_text())
-        # if zoom_in is True, reduce the window by a factor of 100 - step %
-        factor = (1 - step/100)**(1 if zoom_in else -1)
-        self._window_size = np.multiply(self._window_size, (factor, factor))
+        # if zoom_in is True, reduce the window
+        factor = (1 + step/100)**(-1 if zoom_in else 1)
+        new_window_size = np.multiply(self._window_size, (factor, factor))
+        if new_window_size[0] < 10 or new_window_size[1] < 10:
+            dialog = Gtk.MessageDialog(
+                self._builder.get_object("main_window"), Gtk.DialogFlags.MODAL,
+                Gtk.MessageType.WARNING, Gtk.ButtonsType.OK,
+                "Maximum zoom in exceeded!")
+            dialog.run()
+            dialog.destroy()
+        else:
+            self._window_size = new_window_size
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):
@@ -129,12 +138,10 @@ class MainWindow:
             object on those points.
         """
         dialog = EntryDialog(
-            self._builder.get_object("main_window"),
-            "Enter the coordinates", Object.default_name(), "0,0;50,0;50,50")
+            self._builder.get_object("main_window"), "Enter the coordinates",
+            Object.default_name(), "0,0;50,0;50,50")
         if dialog.run():
-            points = [
-                (int(point[0]), int(point[1])) for point in
-                map(lambda p: p.split(","), dialog.points.split(";"))]
+            points = dialog.points
             if dialog.wrap:
                 points.append(points[0])
             self._world.add_object(Object(points, dialog.name))

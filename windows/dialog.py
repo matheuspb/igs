@@ -10,21 +10,19 @@ class EntryDialog(Gtk.MessageDialog):
 
     class _Decorators:
         @staticmethod
-        def warning(message):
+        def warning(func):
             """ Opens a dialog if the inner function raises a RuntimeError. """
-            def decorator(func):
-                def wrapper(self):
-                    while True:
-                        try:
-                            return func(self)
-                        except RuntimeError:
-                            dialog = Gtk.MessageDialog(
-                                self, 0, Gtk.MessageType.WARNING,
-                                Gtk.ButtonsType.OK, message)
-                            dialog.run()
-                            dialog.destroy()
-                return wrapper
-            return decorator
+            def wrapper(self):
+                while True:
+                    try:
+                        return func(self)
+                    except RuntimeError as error:
+                        dialog = Gtk.MessageDialog(
+                            self, Gtk.DialogFlags.MODAL,
+                            Gtk.MessageType.WARNING, Gtk.ButtonsType.OK, error)
+                        dialog.run()
+                        dialog.destroy()
+            return wrapper
 
     def __init__(self, parent, text, name_hint, points_hint):
         super(EntryDialog, self).__init__(
@@ -51,14 +49,14 @@ class EntryDialog(Gtk.MessageDialog):
         self.set_size_request(400, 0)
         self.vbox.show_all()
 
-    @_Decorators.warning("Invalid points format")
+    @_Decorators.warning
     def run(self):
         """ Runs the dialog. """
         result = super(EntryDialog, self).run()
         if result == Gtk.ResponseType.OK:
             text = self._points_entry.get_text()
             if not EntryDialog.POINTS_PATTERN.match(text):
-                raise RuntimeError()
+                raise RuntimeError("Invalid points format")
             return True
         return False
 
@@ -70,7 +68,10 @@ class EntryDialog(Gtk.MessageDialog):
     @property
     def points(self):
         """ Points of the wireframe. """
-        return self._points_entry.get_text()
+        return [
+            (int(point[0]), int(point[1])) for point in
+            map(lambda p: p.split(","),
+            self._points_entry.get_text().split(";"))]
 
     @property
     def wrap(self):
