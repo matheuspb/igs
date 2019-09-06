@@ -39,8 +39,8 @@ class MainWindow:
             "on_button_down_clicked": lambda _: self._move_object(0, -1),
             "on_button_left_clicked": lambda _: self._move_object(-1, 0),
             "on_button_right_clicked": lambda _: self._move_object(1, 0),
-            "on_zoom_in": lambda _: self._zoom(True),
-            "on_zoom_out": lambda _: self._zoom(False),
+            "on_zoom_in": lambda _: self._zoom_object(True),
+            "on_zoom_out": lambda _: self._zoom_object(False),
             # menu bar buttons
             "on_menu_bar_quit": Gtk.main_quit,
             "on_create_wireframe": self._create_wireframe,
@@ -127,21 +127,26 @@ class MainWindow:
             self._world[selected].move(offset)
 
     @_Decorators.needs_redraw
-    def _zoom(self, zoom_in):
-        """ Zoom in or out by scaling the window size. """
+    def _zoom_object(self, zoom_in):
+        """ Zoom in or out the selected object or the window. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         # if zoom_in is True, reduce the window
         factor = (1 + step/100)**(-1 if zoom_in else 1)
-        new_window_size = np.multiply(self._window_size, (factor, factor))
-        if new_window_size[0] < 10 or new_window_size[1] < 10:
-            dialog = Gtk.MessageDialog(
-                self._builder.get_object("main_window"), Gtk.DialogFlags.MODAL,
-                Gtk.MessageType.WARNING, Gtk.ButtonsType.OK,
-                "Maximum zoom in exceeded!")
-            dialog.run()
-            dialog.destroy()
+        selected = self._get_selected()
+        if selected == "Window":
+            new_window_size = np.multiply(self._window_size, (factor, factor))
+            if new_window_size[0] < 10 or new_window_size[1] < 10:
+                dialog = Gtk.MessageDialog(
+                    self._builder.get_object("main_window"),
+                    Gtk.DialogFlags.MODAL, Gtk.MessageType.WARNING,
+                    Gtk.ButtonsType.OK, "Maximum zoom in exceeded!")
+                dialog.run()
+                dialog.destroy()
+            else:
+                self._window_size = new_window_size
         else:
-            self._window_size = new_window_size
+            factor = factor**(-1)
+            self._world[selected].zoom(factor)
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):

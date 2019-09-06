@@ -32,4 +32,14 @@ class Object:
 
     def move(self, offset):
         for pos, point in enumerate(self._points):
-            self._points[pos] = np.add(point, offset)
+            self._points[pos] = tuple(np.add(point, offset))
+
+    def zoom(self, factor):
+        x_points = [point[0] for point in set(self._points)]
+        y_points = [point[1] for point in set(self._points)]
+        center = (np.average(x_points), np.average(y_points))
+        print(center)
+        for pos, point in enumerate(self._points):
+            new_point = np.subtract(point, center)
+            new_point = np.multiply(new_point, (factor, factor))
+            self._points[pos] = tuple(np.add(new_point, center))
