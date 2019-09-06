@@ -39,8 +39,12 @@ class MainWindow:
             "on_button_down_clicked": lambda _: self._move_object(0, -1),
             "on_button_left_clicked": lambda _: self._move_object(-1, 0),
             "on_button_right_clicked": lambda _: self._move_object(1, 0),
-            "on_zoom_in": lambda _: self._zoom_object(True),
-            "on_zoom_out": lambda _: self._zoom_object(False),
+            "on_zoom_in": lambda _: self._zoom_object(zoom_in=True),
+            "on_zoom_out": lambda _: self._zoom_object(zoom_in=False),
+            "on_button_rotate_right_clicked":
+                lambda _: self._rotate_object(right=True),
+            "on_button_rotate_left_clicked":
+                lambda _: self._rotate_object(right=False),
             # menu bar buttons
             "on_menu_bar_quit": Gtk.main_quit,
             "on_create_wireframe": self._create_wireframe,
@@ -147,6 +151,19 @@ class MainWindow:
         else:
             factor = factor**(-1)
             self._world[selected].zoom(factor)
+
+    @_Decorators.needs_redraw
+    def _rotate_object(self, right):
+        """
+            Rotates the selected object left or right.
+
+            This still does not rotate the window.
+        """
+        selected = self._get_selected()
+        if selected != "Window":
+            angle = np.radians(
+                int(self._builder.get_object("angle_entry").get_text()))
+            self._world[selected].rotate(angle if right else -angle)
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):

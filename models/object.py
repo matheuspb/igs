@@ -30,16 +30,46 @@ class Object:
         """ Name of the object. """
         return self._name
 
+    def _transform(self, matrix):
+        x_points = [point[0] for point in set(self._points)]
+        y_points = [point[1] for point in set(self._points)]
+        center = (np.average(x_points), np.average(y_points))
+
+        # move object to center
+        operation_matrix = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [-center[0], -center[1], 1],
+        ])
+
+        # perform operation
+        operation_matrix = operation_matrix.dot([
+            matrix[0] + [0],
+            matrix[1] + [0],
+            [0, 0, 1],
+        ])
+
+        # move object back to original position
+        operation_matrix = operation_matrix.dot([
+            [1, 0, 0],
+            [0, 1, 0],
+            [center[0], center[1], 1],
+        ])
+
+        for pos, point in enumerate(self._points):
+            new_point = np.dot(point + (1,), operation_matrix)
+            self._points[pos] = tuple(new_point[:2])
+
     def move(self, offset):
         for pos, point in enumerate(self._points):
             self._points[pos] = tuple(np.add(point, offset))
 
     def zoom(self, factor):
-        x_points = [point[0] for point in set(self._points)]
-        y_points = [point[1] for point in set(self._points)]
-        center = (np.average(x_points), np.average(y_points))
-        print(center)
-        for pos, point in enumerate(self._points):
-            new_point = np.subtract(point, center)
-            new_point = np.multiply(new_point, (factor, factor))
-            self._points[pos] = tuple(np.add(new_point, center))
+        self._transform(
+            [[factor, 0],
+            [0, factor]])
+
+    def rotate(self, angle):
+        self._transform(
+            [[np.cos(angle), -np.sin(angle)],
+            [np.sin(angle), np.cos(angle)]])
