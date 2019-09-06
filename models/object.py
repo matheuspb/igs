@@ -1,4 +1,6 @@
 """ This module contains a class that describes an object in the world """
+import numpy as np
+
 
 class Object:
     """
@@ -13,6 +15,11 @@ class Object:
         self._name = self.default_name() if name is None else name
         Object.TOTAL_OBJECTS += 1
 
+    @staticmethod
+    def default_name():
+        """ Default name for new objects. """
+        return "object{}".format(Object.TOTAL_OBJECTS + 1)
+
     @property
     def points(self):
         """ The points in the wireframe. """
@@ -23,7 +30,6 @@ class Object:
         """ Name of the object. """
         return self._name
 
-    @staticmethod
-    def default_name():
-        """ Default name for new objects. """
-        return "object{}".format(Object.TOTAL_OBJECTS + 1)
+    def move(self, offset):
+        for pos, point in enumerate(self._points):
+            self._points[pos] = np.add(point, offset)

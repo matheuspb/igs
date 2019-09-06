@@ -35,10 +35,10 @@ class MainWindow:
         handlers = {
             "on_destroy": Gtk.main_quit,
             "on_draw": self._on_draw,
-            "on_button_up_clicked": lambda _: self._move_window(0, 1),
-            "on_button_down_clicked": lambda _: self._move_window(0, -1),
-            "on_button_left_clicked": lambda _: self._move_window(-1, 0),
-            "on_button_right_clicked": lambda _: self._move_window(1, 0),
+            "on_button_up_clicked": lambda _: self._move_object(0, 1),
+            "on_button_down_clicked": lambda _: self._move_object(0, -1),
+            "on_button_left_clicked": lambda _: self._move_object(-1, 0),
+            "on_button_right_clicked": lambda _: self._move_object(1, 0),
             "on_zoom_in": lambda _: self._zoom(True),
             "on_zoom_out": lambda _: self._zoom(False),
             # menu bar buttons
@@ -50,10 +50,11 @@ class MainWindow:
             *MainWindow.VIEWPORT_SIZE)
 
         # create some dummy objects
-        self._world = World({
-            Object([(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)]),
-            Object([(-80, -100), (-50, -150), (-20, -100), (-80, -100)]),
-        })
+        self._world = World()
+        self._world.add_object(
+            Object([(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)]))
+        self._world.add_object(
+            Object([(-80, -100), (-50, -150), (-20, -100), (-80, -100)]))
 
         # set viewport center position relative to world coordinates
         self._position = (0, 0)
@@ -68,6 +69,7 @@ class MainWindow:
             Gtk.TreeViewColumn("Name", Gtk.CellRendererText(), text=0))
 
         # add object names to tree view
+        self._store.append(["Window"])
         for obj in self._world.objects:
             self._store.append([obj.name])
 
@@ -108,11 +110,21 @@ class MainWindow:
                 ctx.line_to(*point)
         ctx.stroke()
 
+    def _get_selected(self):
+        tree, pos = self._builder.get_object("object_tree") \
+            .get_selection().get_selected()
+        return "Window" if pos is None else tree[pos][0]
+
     @_Decorators.needs_redraw
-    def _move_window(self, x_offset, y_offset):
-        """ Move the window by moving its center position. """
+    def _move_object(self, x_offset, y_offset):
+        """ Moves a selected object or the window itself. """
+        selected = self._get_selected()
         step = int(self._builder.get_object("move_step_entry").get_text())
-        self._position = np.add(self._position, (x_offset*step, y_offset*step))
+        offset = (x_offset*step, y_offset*step)
+        if selected == "Window":
+            self._position = np.add(self._position, offset)
+        else:
+            self._world[selected].move(offset)
 
     @_Decorators.needs_redraw
     def _zoom(self, zoom_in):
