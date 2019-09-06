@@ -68,10 +68,9 @@ class EntryDialog(Gtk.MessageDialog):
     @property
     def points(self):
         """ Points of the wireframe. """
-        return [
-            (int(point[0]), int(point[1])) for point in
-            map(lambda p: p.split(","),
-            self._points_entry.get_text().split(";"))]
+        points = map(
+            lambda p: p.split(","), self._points_entry.get_text().split(";"))
+        return [(int(point[0]), int(point[1])) for point in points]
 
     @property
     def wrap(self):

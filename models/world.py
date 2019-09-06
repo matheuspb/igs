@@ -1,5 +1,6 @@
 """ This module contains the World class. """
 
+
 class World:
     """ Contains all objects that are supposed to be drawn in the viewport. """
 

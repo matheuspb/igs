@@ -61,15 +61,18 @@ class Object:
             self._points[pos] = tuple(new_point[:2])
 
     def move(self, offset):
+        """ Moves the object by an offset = (x, y) """
         for pos, point in enumerate(self._points):
             self._points[pos] = tuple(np.add(point, offset))
 
     def zoom(self, factor):
-        self._transform(
-            [[factor, 0],
+        """ Zooms in the object by 'factor' times """
+        self._transform([
+            [factor, 0],
             [0, factor]])
 
     def rotate(self, angle):
-        self._transform(
-            [[np.cos(angle), -np.sin(angle)],
+        """ Rotates the object, the angle is given in radians """
+        self._transform([
+            [np.cos(angle), -np.sin(angle)],
             [np.sin(angle), np.cos(angle)]])
