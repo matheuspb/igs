@@ -8,14 +8,7 @@ from .dialog import EntryDialog
 
 
 class MainWindow:
-    """
-        Main window that contains the viewport to the world.
-
-        In this class comments, the actual slice of the world that is being
-        shown, is refered to as "window". The widget that shows the window is
-        called "viewport", it is an immutable object. On the other hand, the
-        window can be moved or scaled using the buttons.
-    """
+    """ Main window that contains the viewport to the world. """
 
     VIEWPORT_SIZE = (500, 500)
 
@@ -54,17 +47,11 @@ class MainWindow:
             *MainWindow.VIEWPORT_SIZE)
 
         # create some dummy objects
-        self._world = World()
+        self._world = World(MainWindow.VIEWPORT_SIZE)
         self._world.add_object(
             Object([(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)]))
         self._world.add_object(
             Object([(-80, -100), (-50, -150), (-20, -100), (-80, -100)]))
-
-        # set viewport center position relative to world coordinates
-        self._position = (0, 0)
-
-        # set viewport size relative to the world
-        self._window_size = MainWindow.VIEWPORT_SIZE
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)
@@ -73,7 +60,6 @@ class MainWindow:
             Gtk.TreeViewColumn("Name", Gtk.CellRendererText(), text=0))
 
         # add object names to tree view
-        self._store.append(["Window"])
         for obj in self._world.objects:
             self._store.append([obj.name])
 
@@ -81,34 +67,10 @@ class MainWindow:
         """ Shows all window widgets. """
         self._builder.get_object("main_window").show_all()
 
-    def _viewport_transform(self):
-        """
-            Returns a list of lists of coordinates, ready to be drawn in the
-            viewport. Basically this returns all world objects normalized to
-            the viewport coordinates.
-        """
-        # calculate window boundaries in the world
-        xw_min = self._position[0] - self._window_size[0]/2
-        yw_min = self._position[1] - self._window_size[1]/2
-        xw_max = self._position[0] + self._window_size[0]/2
-        yw_max = self._position[1] + self._window_size[1]/2
-
-        def transform_point(point):
-            newx = ((point[0] - xw_min)/(xw_max - xw_min)) * \
-                MainWindow.VIEWPORT_SIZE[0]
-            newy = (1 - (point[1] - yw_min)/(yw_max - yw_min)) * \
-                MainWindow.VIEWPORT_SIZE[1]
-            return (newx, newy)
-
-        # build a list of transformed points for each object
-        return [
-            list(map(transform_point, obj.points))
-            for obj in self._world.objects]
-
     def _on_draw(self, _, ctx):
         ctx.set_line_width(2)
         ctx.set_source_rgb(0, 0, 0)
-        for obj in self._viewport_transform():
+        for obj in self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
             ctx.move_to(*obj[0])
             for point in obj[1:]:
                 ctx.line_to(*point)
@@ -117,53 +79,36 @@ class MainWindow:
     def _get_selected(self):
         tree, pos = self._builder.get_object("object_tree") \
             .get_selection().get_selected()
-        return "Window" if pos is None else tree[pos][0]
+        return "window" if pos is None else tree[pos][0]
 
     @_Decorators.needs_redraw
     def _move_object(self, x_offset, y_offset):
-        """ Moves a selected object or the window itself. """
-        selected = self._get_selected()
+        """ Moves a selected object. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         offset = (x_offset*step, y_offset*step)
-        if selected == "Window":
-            self._position = np.add(self._position, offset)
-        else:
-            self._world[selected].move(offset)
+        self._world[self._get_selected()].move(offset)
 
     @_Decorators.needs_redraw
     def _zoom_object(self, zoom_in):
-        """ Zoom in or out the selected object or the window. """
+        """ Zoom in or out the selected object. """
         step = int(self._builder.get_object("move_step_entry").get_text())
-        # if zoom_in is True, reduce the window
-        factor = (1 + step/100)**(-1 if zoom_in else 1)
-        selected = self._get_selected()
-        if selected == "Window":
-            new_window_size = np.multiply(self._window_size, (factor, factor))
-            if new_window_size[0] < 10 or new_window_size[1] < 10:
-                dialog = Gtk.MessageDialog(
-                    self._builder.get_object("main_window"),
-                    Gtk.DialogFlags.MODAL, Gtk.MessageType.WARNING,
-                    Gtk.ButtonsType.OK, "Maximum zoom in exceeded!")
-                dialog.run()
-                dialog.destroy()
-            else:
-                self._window_size = new_window_size
-        else:
-            factor = factor**(-1)
-            self._world[selected].zoom(factor)
+        factor = (1 + step/100)**(1 if zoom_in else -1)
+        try:
+            self._world[self._get_selected()].zoom(factor)
+        except RuntimeError as error:
+            dialog = Gtk.MessageDialog(
+                self._builder.get_object("main_window"),
+                Gtk.DialogFlags.MODAL, Gtk.MessageType.WARNING,
+                Gtk.ButtonsType.OK, str(error))
+            dialog.run()
+            dialog.destroy()
 
     @_Decorators.needs_redraw
     def _rotate_object(self, right):
-        """
-            Rotates the selected object left or right.
-
-            This still does not rotate the window.
-        """
-        selected = self._get_selected()
-        if selected != "Window":
-            angle = np.radians(
-                int(self._builder.get_object("angle_entry").get_text()))
-            self._world[selected].rotate(angle if right else -angle)
+        """ Rotates the selected object left or right. """
+        angle = np.radians(
+            int(self._builder.get_object("angle_entry").get_text()))
+        self._world[self._get_selected()].rotate(angle if right else -angle)
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):

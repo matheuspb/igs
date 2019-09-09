@@ -76,3 +76,53 @@ class Object:
         self._transform([
             [np.cos(angle), -np.sin(angle)],
             [np.sin(angle), np.cos(angle)]])
+
+
+class Window(Object):
+    """
+        The window object.
+
+        This object delimits what should be drawn in the viewport. Moving and
+        rescaling it has the effect to change which portion of the world is
+        drawn at the viewport.
+    """
+
+    def __init__(self, width, height):
+        self._points = [
+            (-width/2, height/2),
+            (width/2, height/2),
+            (width/2, -height/2),
+            (-width/2, -height/2),
+        ]
+        self._points.append(self._points[0])
+        self._name = "window"
+
+    @property
+    def boundaries(self):
+        """ Returns windows' bottom left and upper right coordinates """
+        return (self._points[3], self._points[1])
+
+    @property
+    def points(self):
+        return [(0, 0)]  # window shouldn't be drawn
+
+    def zoom(self, factor):
+        # save original state
+        original_points = self._points.copy()
+
+        # apply the zoom operation
+        super().zoom(factor**(-1))
+
+        # find new window size
+        minimum, maximum = self.boundaries
+        width = maximum[0] - minimum[0]
+        height = maximum[1] - minimum[1]
+
+        # if zoom was exceeded, go back to original state and raise an error
+        if width < 10 or height < 10:
+            self._points = original_points
+            raise RuntimeError("Maximum zoom in exceeded")
+
+    def rotate(self, _):
+        # not implemented yet
+        pass
