@@ -30,11 +30,13 @@ class Object:
         """ Name of the object. """
         return self._name
 
-    def _transform(self, matrix):
+    @property
+    def center(self):
         x_points = [point[0] for point in set(self._points)]
         y_points = [point[1] for point in set(self._points)]
-        center = (np.average(x_points), np.average(y_points))
+        return (np.average(x_points), np.average(y_points))
 
+    def _transform(self, matrix, center=None):
         # move object to center
         operation_matrix = np.array([
             [1, 0, 0],
@@ -71,11 +73,12 @@ class Object:
             [factor, 0],
             [0, factor]])
 
-    def rotate(self, angle):
-        """ Rotates the object, the angle is given in radians """
+    def rotate(self, angle, center=None):
+        """ Rotates the object around center, the angle is in radians. """
         self._transform([
             [np.cos(angle), -np.sin(angle)],
-            [np.sin(angle), np.cos(angle)]])
+            [np.sin(angle), np.cos(angle)]],
+            self.center if center is None else center)
 
 
 class Window(Object):
@@ -123,6 +126,6 @@ class Window(Object):
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
 
-    def rotate(self, _):
+    def rotate(self, *args):
         # not implemented yet
         pass

@@ -1,4 +1,6 @@
 """ This module contains the main window of the application. """
+from enum import Enum
+
 from gi.repository import Gtk
 import numpy as np
 
@@ -11,6 +13,14 @@ class MainWindow:
     """ Main window that contains the viewport to the world. """
 
     VIEWPORT_SIZE = (500, 500)
+
+    class Rotation(Enum):
+        OBJECT = 0
+        WINDOW = 1
+        WORLD = 2
+
+        def __str__(self):
+            return "Around {} center".format(self.name.lower())
 
     class _Decorators:
         @staticmethod
@@ -63,6 +73,11 @@ class MainWindow:
         for obj in self._world.objects:
             self._store.append([obj.name])
 
+        rotation_modes = self._builder.get_object("rotation_modes")
+        rotation_modes.set_entry_text_column(0)
+        for mode in MainWindow.Rotation:
+            rotation_modes.append_text(str(mode))
+
     def show(self):
         """ Shows all window widgets. """
         self._builder.get_object("main_window").show_all()
@@ -108,7 +123,15 @@ class MainWindow:
         """ Rotates the selected object left or right. """
         angle = np.radians(
             int(self._builder.get_object("angle_entry").get_text()))
-        self._world[self._get_selected()].rotate(angle if right else -angle)
+        angle = angle if right else -angle
+        obj = self._world[self._get_selected()]
+        mode = self._builder.get_object("rotation_modes").get_active_text()
+        if mode == str(MainWindow.Rotation.OBJECT):
+            obj.rotate(angle)
+        elif mode == str(MainWindow.Rotation.WINDOW):
+            obj.rotate(angle, self._world["window"].center)
+        elif mode == str(MainWindow.Rotation.WORLD):
+            obj.rotate(angle, (0, 0))
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):
