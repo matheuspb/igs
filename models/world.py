@@ -33,7 +33,9 @@ class World:
             return (newx, newy)
 
         # build a list of transformed points for each object
-        return [list(map(transform_point, obj.points)) for obj in self.objects]
+        return [
+            (list(map(transform_point, obj.points)), obj.color)
+            for obj in self.objects]
 
     @property
     def objects(self):

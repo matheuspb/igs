@@ -8,11 +8,12 @@ class Object:
         lines that can be drawn in the viewport.
     """
 
-    TOTAL_OBJECTS = 0
+    TOTAL_OBJECTS = -1
 
-    def __init__(self, points=None, name=None):
+    def __init__(self, points=None, name=None, color=None):
         self._points = [] if points is None else points
         self._name = self.default_name() if name is None else name
+        self._color = (0, 0, 0) if color is None else color
         Object.TOTAL_OBJECTS += 1
 
     @staticmethod
@@ -29,6 +30,11 @@ class Object:
     def name(self):
         """ Name of the object. """
         return self._name
+
+    @property
+    def color(self):
+        """ Color of the object. """
+        return self._color
 
     @property
     def center(self):
@@ -91,14 +97,14 @@ class Window(Object):
     """
 
     def __init__(self, width, height):
-        self._points = [
+        points = [
             (-width/2, height/2),
             (width/2, height/2),
             (width/2, -height/2),
             (-width/2, -height/2),
         ]
-        self._points.append(self._points[0])
-        self._name = "window"
+        points.append(points[0])
+        super().__init__(points, "window")
 
     @property
     def boundaries(self):

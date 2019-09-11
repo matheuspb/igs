@@ -7,6 +7,7 @@ class EntryDialog(Gtk.MessageDialog):
     """ Prompts the user for a list of points that describe a wireframe. """
 
     POINTS_PATTERN = re.compile(r"^(-?\d+,-?\d+;)*-?\d+,-?\d+$")
+    PADDING = 10
 
     class _Decorators:
         @staticmethod
@@ -40,13 +41,31 @@ class EntryDialog(Gtk.MessageDialog):
         self._points_entry.set_text(points_hint)
         self.vbox.pack_start(self._points_entry, False, False, 0)
 
+        # build RGB entry
+        hbox = Gtk.HBox()
+        self.vbox.pack_start(hbox, False, False, 0)
+        # red
+        hbox.pack_start(Gtk.Label("R:"), False, False, EntryDialog.PADDING)
+        self._red_entry = Gtk.Entry()
+        self._red_entry.set_text("0")
+        hbox.pack_start(self._red_entry, False, False, EntryDialog.PADDING)
+        # green
+        hbox.pack_start(Gtk.Label("G:"), False, False, EntryDialog.PADDING)
+        self._green_entry = Gtk.Entry()
+        self._green_entry.set_text("0")
+        hbox.pack_start(self._green_entry, False, False, EntryDialog.PADDING)
+        # blue
+        hbox.pack_start(Gtk.Label("B:"), False, False, EntryDialog.PADDING)
+        self._blue_entry = Gtk.Entry()
+        self._blue_entry.set_text("0")
+        hbox.pack_start(self._blue_entry, False, False, EntryDialog.PADDING)
+
         # build the wrap object check box
         self._check = Gtk.CheckButton("Connect last point to the first one")
         self._check.set_active(True)
         self.vbox.pack_start(self._check, False, False, 0)
 
-        # set size and show widgets inside vbox
-        self.set_size_request(400, 0)
+        # show widgets inside vbox
         self.vbox.show_all()
 
     @_Decorators.warning
@@ -71,6 +90,14 @@ class EntryDialog(Gtk.MessageDialog):
         points = map(
             lambda p: p.split(","), self._points_entry.get_text().split(";"))
         return [(int(point[0]), int(point[1])) for point in points]
+
+    @property
+    def color(self):
+        """ Triple with the RGB color of the wireframe. """
+        red = int(self._red_entry.get_text()) / 255
+        green = int(self._green_entry.get_text()) / 255
+        blue = int(self._blue_entry.get_text()) / 255
+        return red, green, blue
 
     @property
     def wrap(self):

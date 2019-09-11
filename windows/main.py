@@ -59,9 +59,13 @@ class MainWindow:
         # create some dummy objects
         self._world = World(MainWindow.VIEWPORT_SIZE)
         self._world.add_object(
-            Object([(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)]))
+            Object(
+                [(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)],
+                color=(1, 0, 1)))
         self._world.add_object(
-            Object([(-80, -100), (-50, -150), (-20, -100), (-80, -100)]))
+            Object(
+                [(-80, -100), (-50, -150), (-20, -100), (-80, -100)],
+                color=(0, 1, 0)))
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)
@@ -84,12 +88,13 @@ class MainWindow:
 
     def _on_draw(self, _, ctx):
         ctx.set_line_width(2)
-        ctx.set_source_rgb(0, 0, 0)
-        for obj in self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
-            ctx.move_to(*obj[0])
-            for point in obj[1:]:
+        for points, color in \
+                self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
+            ctx.set_source_rgb(*color)
+            ctx.move_to(*points[0])
+            for point in points[1:]:
                 ctx.line_to(*point)
-        ctx.stroke()
+            ctx.stroke()
 
     def _get_selected(self):
         tree, pos = self._builder.get_object("object_tree") \
@@ -146,6 +151,6 @@ class MainWindow:
             points = dialog.points
             if dialog.wrap:
                 points.append(points[0])
-            self._world.add_object(Object(points, dialog.name))
+            self._world.add_object(Object(points, dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()
