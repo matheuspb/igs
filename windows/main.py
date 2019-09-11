@@ -14,7 +14,7 @@ class MainWindow:
 
     VIEWPORT_SIZE = (500, 500)
 
-    class Rotation(Enum):
+    class _Rotation(Enum):
         OBJECT = 0
         WINDOW = 1
         WORLD = 2
@@ -79,7 +79,7 @@ class MainWindow:
 
         rotation_modes = self._builder.get_object("rotation_modes")
         rotation_modes.set_entry_text_column(0)
-        for mode in MainWindow.Rotation:
+        for mode in MainWindow._Rotation:
             rotation_modes.append_text(str(mode))
 
     def show(self):
@@ -131,11 +131,11 @@ class MainWindow:
         angle = angle if right else -angle
         obj = self._world[self._get_selected()]
         mode = self._builder.get_object("rotation_modes").get_active_text()
-        if mode == str(MainWindow.Rotation.OBJECT):
+        if mode == str(MainWindow._Rotation.OBJECT):
             obj.rotate(angle)
-        elif mode == str(MainWindow.Rotation.WINDOW):
+        elif mode == str(MainWindow._Rotation.WINDOW):
             obj.rotate(angle, self._world["window"].center)
-        elif mode == str(MainWindow.Rotation.WORLD):
+        elif mode == str(MainWindow._Rotation.WORLD):
             obj.rotate(angle, (0, 0))
 
     @_Decorators.needs_redraw

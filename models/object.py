@@ -38,11 +38,14 @@ class Object:
 
     @property
     def center(self):
+        """ Center of the object. """
         x_points = [point[0] for point in set(self._points)]
         y_points = [point[1] for point in set(self._points)]
         return (np.average(x_points), np.average(y_points))
 
     def _transform(self, matrix, center=None):
+        center = self.center if center is None else center
+
         # move object to center
         operation_matrix = np.array([
             [1, 0, 0],
@@ -75,16 +78,19 @@ class Object:
 
     def zoom(self, factor):
         """ Zooms in the object by 'factor' times """
-        self._transform([
-            [factor, 0],
-            [0, factor]])
+        self._transform(
+            [
+                [factor, 0],
+                [0, factor],
+            ])
 
     def rotate(self, angle, center=None):
         """ Rotates the object around center, the angle is in radians. """
-        self._transform([
-            [np.cos(angle), -np.sin(angle)],
-            [np.sin(angle), np.cos(angle)]],
-            self.center if center is None else center)
+        self._transform(
+            [
+                [np.cos(angle), -np.sin(angle)],
+                [np.sin(angle), np.cos(angle)],
+            ], center)
 
 
 class Window(Object):
