@@ -81,6 +81,7 @@ class MainWindow:
         rotation_modes.set_entry_text_column(0)
         for mode in MainWindow._Rotation:
             rotation_modes.append_text(str(mode))
+        rotation_modes.set_active(0)
 
     def show(self):
         """ Shows all window widgets. """
