@@ -1,5 +1,6 @@
 """ This module contains the main window of the application. """
 from enum import Enum
+from time import sleep
 
 from gi.repository import Gtk
 import numpy as np
@@ -102,20 +103,43 @@ class MainWindow:
             .get_selection().get_selected()
         return "window" if pos is None else tree[pos][0]
 
+    def _force_redraw(self):
+        self._builder.get_object("viewport").queue_draw()
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(True)
+
     @_Decorators.needs_redraw
     def _move_object(self, x_offset, y_offset):
         """ Moves a selected object. """
         step = int(self._builder.get_object("move_step_entry").get_text())
         offset = (x_offset*step, y_offset*step)
-        self._world[self._get_selected()].move(offset)
+        actual = (0, 0)
+        diff = offset
+        while np.abs(diff[0]) > 0.01 or np.abs(diff[1]) > 0.01:
+            diff = np.subtract(offset, actual)
+            actual_offset = np.multiply(diff, 0.1)
+            actual = np.add(actual, actual_offset)
+            self._world[self._get_selected()].move(actual_offset)
+            self._force_redraw()
+            sleep(0.01)
+        self._world[self._get_selected()].move(np.subtract(offset, actual))
 
     @_Decorators.needs_redraw
     def _zoom_object(self, zoom_in):
         """ Zoom in or out the selected object. """
-        step = int(self._builder.get_object("move_step_entry").get_text())
-        factor = (1 + step/100)**(1 if zoom_in else -1)
         try:
-            self._world[self._get_selected()].zoom(factor)
+            step = int(self._builder.get_object("move_step_entry").get_text())
+            factor = (1 + step/100)**(1 if zoom_in else -1)
+            actual = 1
+            diff = 1
+            while np.abs(diff) > 0.00001:
+                diff = factor - actual
+                actual_factor = 1 + diff * 0.1
+                actual *= actual_factor
+                self._world[self._get_selected()].zoom(actual_factor)
+                self._force_redraw()
+                sleep(0.01)
+            self._world[self._get_selected()].zoom(1 + (factor - actual))
         except RuntimeError as error:
             dialog = Gtk.MessageDialog(
                 self._builder.get_object("main_window"),
@@ -133,11 +157,22 @@ class MainWindow:
         obj = self._world[self._get_selected()]
         mode = self._builder.get_object("rotation_modes").get_active_text()
         if mode == str(MainWindow._Rotation.OBJECT):
-            obj.rotate(angle)
+            center = obj.center
         elif mode == str(MainWindow._Rotation.WINDOW):
-            obj.rotate(angle, self._world["window"].center)
+            center = self._world["window"].center
         elif mode == str(MainWindow._Rotation.WORLD):
-            obj.rotate(angle, (0, 0))
+            center = (0, 0)
+
+        actual = 0
+        diff = angle
+        while np.abs(diff) > 0.01:
+            diff = angle - actual
+            actual_angle = diff * 0.1
+            actual += actual_angle
+            obj.rotate(actual_angle, center)
+            self._force_redraw()
+            sleep(0.01)
+        obj.rotate(angle - actual, center)
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):
