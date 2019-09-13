@@ -108,6 +108,9 @@ class MainWindow:
         while Gtk.events_pending():
             Gtk.main_iteration_do(True)
 
+    def _get_smooth_factor(self):
+        return 1 - self._builder.get_object("smooth_scale").get_value()
+
     @_Decorators.needs_redraw
     def _move_object(self, x_offset, y_offset):
         """ Moves a selected object. """
@@ -117,7 +120,7 @@ class MainWindow:
         diff = offset
         while np.abs(diff[0]) > 0.01 or np.abs(diff[1]) > 0.01:
             diff = np.subtract(offset, actual)
-            actual_offset = np.multiply(diff, 0.1)
+            actual_offset = np.multiply(diff, self._get_smooth_factor())
             actual = np.add(actual, actual_offset)
             self._world[self._get_selected()].move(actual_offset)
             self._force_redraw()
@@ -132,9 +135,9 @@ class MainWindow:
             factor = (1 + step/100)**(1 if zoom_in else -1)
             actual = 1
             diff = 1
-            while np.abs(diff) > 0.00001:
+            while np.abs(diff) > 0.001:
                 diff = factor - actual
-                actual_factor = 1 + diff * 0.1
+                actual_factor = 1 + diff * self._get_smooth_factor()
                 actual *= actual_factor
                 self._world[self._get_selected()].zoom(actual_factor)
                 self._force_redraw()
@@ -167,7 +170,7 @@ class MainWindow:
         diff = angle
         while np.abs(diff) > 0.01:
             diff = angle - actual
-            actual_angle = diff * 0.1
+            actual_angle = diff * self._get_smooth_factor()
             actual += actual_angle
             obj.rotate(actual_angle, center)
             self._force_redraw()
