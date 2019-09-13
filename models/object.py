@@ -121,6 +121,21 @@ class Window(Object):
     def points(self):
         return [(0, 0)]  # window shouldn't be drawn
 
+    @property
+    def angle(self):
+        """ Returns the angle of the 'view up' vector. """
+        window_up = np.subtract(self._points[0], self._points[3])
+        return np.arctan2(1, 0) - np.arctan2(window_up[1], window_up[0])
+
+    def move(self, offset):
+        angle = self.angle
+        # rotate offset angle so movements are relative to window's angle
+        offset = np.dot(offset, [
+            [np.cos(angle), -np.sin(angle)],
+            [np.sin(angle), np.cos(angle)],
+        ])
+        super().move(offset)
+
     def zoom(self, factor):
         # save original state
         original_points = self._points.copy()
@@ -137,7 +152,3 @@ class Window(Object):
         if width < 10 or height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
-
-    def rotate(self, *args):
-        # not implemented yet
-        pass
