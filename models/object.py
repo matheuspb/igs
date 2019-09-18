@@ -92,6 +92,25 @@ class Object:
                 [np.sin(angle), np.cos(angle)],
             ], center)
 
+    @staticmethod
+    def build_from_file(path):
+        with open(path) as obj:
+            raw_file = obj.read()
+        file_lines = [line.split(" ") for line in raw_file.split("\n")]
+
+        vertices = {}
+        faces = []
+        for number, line in enumerate(file_lines):
+            if line[0] == "v":
+                vertices[number + 1] = (int(line[1]), int(line[2]))
+            if line[0] == "f":
+                face = []
+                for index in line[1:]:
+                    face.append(vertices[int(index)])
+                face.append(vertices[int(line[1])])
+                faces.append(face)
+        return [Object(points=face) for face in faces]
+
 
 class Window(Object):
     """
