@@ -151,7 +151,6 @@ class MainWindow:
             ))
 
         if dialog.run() == Gtk.ResponseType.OK:
-            print(dialog.get_filename())
             for obj in Object.build_from_file(dialog.get_filename()):
                 self._world.add_object(obj)
                 self._store.append([obj.name])
