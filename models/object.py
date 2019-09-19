@@ -122,6 +122,8 @@ class Window(Object):
         drawn at the viewport.
     """
 
+    BORDER = 0.05
+
     def __init__(self, width, height):
         points = [
             (-width/2, height/2),
@@ -130,16 +132,17 @@ class Window(Object):
             (-width/2, -height/2),
         ]
         points.append(points[0])
-        super().__init__(points, "window")
+        super().__init__(points, "window", (255, 0, 0))
 
     @property
     def boundaries(self):
         """ Returns windows' bottom left and upper right coordinates. """
-        return (self._points[3], self._points[1])
-
-    @property
-    def points(self):
-        return [(0, 0)]  # window shouldn't be drawn
+        width = self._points[1][0] - self._points[3][0]
+        height = self._points[1][1] - self._points[3][1]
+        factor = np.multiply((width, height), Window.BORDER)
+        return (
+            np.subtract(self._points[3], factor),
+            np.add(self._points[1], factor))
 
     @property
     def angle(self):
@@ -165,10 +168,10 @@ class Window(Object):
 
         # find new window size
         minimum, maximum = self.boundaries
-        width = maximum[0] - minimum[0]
-        height = maximum[1] - minimum[1]
+        width = np.abs(maximum[0] - minimum[0])
+        height = np.abs(maximum[1] - minimum[1])
 
         # if zoom was exceeded, go back to original state and raise an error
-        if width < 10 or height < 10:
+        if width < 10 and height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")

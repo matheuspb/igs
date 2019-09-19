@@ -89,7 +89,7 @@ class MainWindow:
         self._builder.get_object("main_window").show_all()
 
     def _on_draw(self, _, ctx):
-        ctx.set_line_width(2)
+        ctx.set_line_width(1)
         for points, color in \
                 self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
             ctx.set_source_rgb(*color)
