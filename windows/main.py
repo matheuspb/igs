@@ -92,11 +92,12 @@ class MainWindow:
         ctx.set_line_width(1)
         for points, color in \
                 self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
-            ctx.set_source_rgb(*color)
-            ctx.move_to(*points[0])
-            for point in points[1:]:
-                ctx.line_to(*point)
-            ctx.stroke()
+            if points:
+                ctx.set_source_rgb(*color)
+                ctx.move_to(*points[0])
+                for point in points[1:]:
+                    ctx.line_to(*point)
+                ctx.stroke()
 
     def _get_selected(self):
         tree, pos = self._builder.get_object("object_tree") \

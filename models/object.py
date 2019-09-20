@@ -92,6 +92,34 @@ class Object:
                 [np.sin(angle), np.cos(angle)],
             ], center)
 
+    def clip(self, boundaries):
+        if len(self._points) == 2:
+            self._points = Object.clip_line(
+                *self._points[0], *self._points[1],
+                *boundaries[0], *boundaries[1])
+
+    @staticmethod
+    def clip_line(x1, y1, x2, y2, xmin, ymin, xmax, ymax):
+        """ Liang-Barsky line clipping algorithm. """
+        dx, dy = x2 - x1, y2 - y1
+        p = [-dx, dx, -dy, dy]
+        q = [x1 - xmin, xmax - x1, y1 - ymin, ymax - y1]
+        r = np.divide(q, p)
+        u1, u2 = 0, 1
+        for i in range(4):
+            if p[i] == 0 and q[i] < 0:
+                return []
+            if p[i] < 0:
+                u1 = max(u1, r[i])
+            if p[i] > 0:
+                u2 = min(u2, r[i])
+        if u1 > u2:
+            return []
+        else:
+            p1 = tuple(np.add((x1, y1), (u1*dx, u1*dy)))
+            p2 = tuple(np.add((x1, y1), (u2*dx, u2*dy)))
+        return [p1, p2]
+
     @staticmethod
     def build_from_file(path):
         """ Returns objects described in an OBJ file. """
@@ -135,14 +163,18 @@ class Window(Object):
         super().__init__(points, "window", (255, 0, 0))
 
     @property
-    def boundaries(self):
-        """ Returns windows' bottom left and upper right coordinates. """
+    def expanded_boundaries(self):
         width = self._points[1][0] - self._points[3][0]
         height = self._points[1][1] - self._points[3][1]
         factor = np.multiply((width, height), Window.BORDER)
         return (
             np.subtract(self._points[3], factor),
             np.add(self._points[1], factor))
+
+    @property
+    def real_boundaries(self):
+        """ Returns windows' bottom left and upper right coordinates. """
+        return (self._points[3], self._points[1])
 
     @property
     def angle(self):
@@ -167,7 +199,7 @@ class Window(Object):
         super().zoom(factor**(-1))
 
         # find new window size
-        minimum, maximum = self.boundaries
+        minimum, maximum = self.real_boundaries
         width = np.abs(maximum[0] - minimum[0])
         height = np.abs(maximum[1] - minimum[1])
 
@@ -175,3 +207,6 @@ class Window(Object):
         if width < 10 and height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
+
+    def clip(self, _):
+        pass
