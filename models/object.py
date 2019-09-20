@@ -169,6 +169,6 @@ class Window(Object):
         height = maximum[1] - minimum[1]
 
         # if zoom was exceeded, go back to original state and raise an error
-        if width < 10 or height < 10:
+        if width < 10 and height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
