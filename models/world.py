@@ -37,7 +37,7 @@ class World:
 
         # clip objects
         for obj in virtual_world.values():
-            obj.clip(virtual_world["window"].real_boundaries)
+            obj.clip(virtual_world["window"])
 
         (x_min, y_min), (x_max, y_max) = \
             virtual_world["window"].expanded_boundaries
