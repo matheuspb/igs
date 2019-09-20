@@ -49,6 +49,7 @@ class MainWindow:
             "on_button_rotate_left_clicked":
                 lambda _: self._rotate_object(right=False),
             # menu bar buttons
+            "on_menu_bar_open": self._open_file,
             "on_menu_bar_quit": Gtk.main_quit,
             "on_create_wireframe": self._create_wireframe,
         }
@@ -138,6 +139,23 @@ class MainWindow:
             obj.rotate(angle, self._world["window"].center)
         elif mode == str(MainWindow._Rotation.WORLD):
             obj.rotate(angle, (0, 0))
+
+    @_Decorators.needs_redraw
+    def _open_file(self, _):
+        dialog = Gtk.FileChooserDialog(
+            "Please choose a file", self._builder.get_object("main_window"),
+            Gtk.FileChooserAction.OPEN,
+            (
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                Gtk.STOCK_OPEN, Gtk.ResponseType.OK
+            ))
+
+        if dialog.run() == Gtk.ResponseType.OK:
+            for obj in Object.build_from_file(dialog.get_filename()):
+                self._world.add_object(obj)
+                self._store.append([obj.name])
+
+        dialog.destroy()
 
     @_Decorators.needs_redraw
     def _create_wireframe(self, _):

@@ -1,4 +1,4 @@
-""" This module contains a class that describes an object in the world """
+""" This module contains a class that describes an object in the world. """
 import numpy as np
 
 
@@ -72,12 +72,12 @@ class Object:
             self._points[pos] = tuple(new_point[:2])
 
     def move(self, offset):
-        """ Moves the object by an offset = (x, y) """
+        """ Moves the object by an offset = (x, y). """
         for pos, point in enumerate(self._points):
             self._points[pos] = tuple(np.add(point, offset))
 
     def zoom(self, factor):
-        """ Zooms in the object by 'factor' times """
+        """ Zooms in the object by 'factor' times. """
         self._transform(
             [
                 [factor, 0],
@@ -91,6 +91,26 @@ class Object:
                 [np.cos(angle), -np.sin(angle)],
                 [np.sin(angle), np.cos(angle)],
             ], center)
+
+    @staticmethod
+    def build_from_file(path):
+        """ Returns objects described in an OBJ file. """
+        with open(path) as obj:
+            raw_file = obj.read()
+        file_lines = [line.split(" ") for line in raw_file.split("\n")]
+
+        vertices = {}
+        faces = []
+        for number, line in enumerate(file_lines):
+            if line[0] == "v":
+                vertices[number + 1] = (int(line[1]), int(line[2]))
+            if line[0] == "f":
+                face = []
+                for index in line[1:]:
+                    face.append(vertices[int(index)])
+                face.append(vertices[int(line[1])])
+                faces.append(face)
+        return [Object(points=face) for face in faces]
 
 
 class Window(Object):
@@ -114,7 +134,7 @@ class Window(Object):
 
     @property
     def boundaries(self):
-        """ Returns windows' bottom left and upper right coordinates """
+        """ Returns windows' bottom left and upper right coordinates. """
         return (self._points[3], self._points[1])
 
     @property
