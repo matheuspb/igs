@@ -93,70 +93,75 @@ class Object:
             ], center)
 
     def clip(self, window):
+        """ Weiler-Atherton polygon clipping algorithm. """
+
+        def connect_points(clipped, side1, side2, window):
+            """ Connects points of the window. """
+            edge = side1
+            while edge != side2:
+                clipped.append(window.points[edge])
+                edge = (edge - 1) % 4
+
         boundaries = window.real_boundaries
-        if len(self._points) == 2:
-            self._points, _ = Object.clip_line(
-                *self._points[0], *self._points[1],
+        clipped = []
+        entered, exited = None, None
+        for i in range(len(self._points) - 1):
+            points, side = Object._clip_line(
+                self._points[i], self._points[i + 1],
                 *boundaries[0], *boundaries[1])
-        elif self._points[0] == self._points[-1]:
-            clipped = []
-            entered, exited = -1, -1
-            for i in range(len(self._points) - 1):
-                points, side = Object.clip_line(
-                    *self._points[i], *self._points[i + 1],
-                    *boundaries[0], *boundaries[1])
-                if not points:
-                    continue
-                if side[0] > -1:  # entered
-                    if exited > -1:
-                        j = exited
-                        while j != side[0]:
-                            j = (j + 1) % 4
-                            clipped.append(window.points[j])
-                    else:
-                        entered = side[0]
-                    clipped.append(points[0])
-                if side[1] > -1:  # exited
-                    exited = side[1]
-                    clipped.append(points[0])
-                    clipped.append(points[1])
+
+            if not points:  # clipped line is outside window
+                continue
+
+            if side[0] is not None:  # entered
+                if exited is not None:
+                    connect_points(clipped, exited, side[0], window)
                 else:
-                    clipped.append(points[0])
-            if clipped:
-                if entered > -1:
-                    j = exited
-                    while j != entered:
-                        j = (j + 1) % 4
-                        clipped.append(window.points[j])
-                clipped.append(clipped[0])
-            self._points = clipped
+                    entered = side[0]
+
+            if side[1] is not None:  # exited
+                exited = side[1]
+                clipped.append(points[0])
+                clipped.append(points[1])
+            else:
+                clipped.append(points[0])
+
+        if clipped:
+            if entered is not None:
+                connect_points(clipped, exited, entered, window)
+            clipped.append(clipped[0])
+
+        self._points = clipped
 
     @staticmethod
-    def clip_line(x1, y1, x2, y2, xmin, ymin, xmax, ymax):
+    def _clip_line(point1, point2, xmin, ymin, xmax, ymax):
         """ Liang-Barsky line clipping algorithm. """
-        dx, dy = x2 - x1, y2 - y1
-        p = [-dx, -dy, dx, dy]
-        q = [x1 - xmin, y1 - ymin, xmax - x1, ymax - y1]
-        r = np.divide(q, p)
-        u1, u2 = 0, 1
-        side = [-1, -1]
+        deltax, deltay = point2[0] - point1[0], point2[1] - point1[1]
+        deltas = [-deltax, -deltay, deltax, deltay]  # p
+        distances = [  # q
+            point1[0] - xmin, point1[1] - ymin,
+            xmax - point1[0], ymax - point1[1]]
+        ratios = np.divide(distances, deltas)  # r
+        pct1, pct2 = 0, 1  # how much of the line is inside the window
+        side = [None, None]
         for i in range(4):
-            if p[i] == 0 and q[i] < 0:
-                return [], side
-            if p[i] < 0:  # entered
-                if r[i] > u1:
+            if deltas[i] == 0 and distances[i] < 0:
+                return (), side
+            if deltas[i] < 0:
+                if ratios[i] > pct1:  # entered
                     side[0] = i
-                    u1 = r[i]
-            if p[i] > 0:  # exited
-                if r[i] < u2:
+                    pct1 = ratios[i]
+            if deltas[i] > 0:
+                if ratios[i] < pct2:  # exited
                     side[1] = i
-                    u2 = r[i]
-        if u1 > u2:
-            return [], side
-        else:
-            p1 = tuple(np.add((x1, y1), (u1*dx, u1*dy)))
-            p2 = tuple(np.add((x1, y1), (u2*dx, u2*dy)))
-        return [p1, p2], side
+                    pct2 = ratios[i]
+        if pct1 > pct2:
+            return (), side
+        clipped = (
+            tuple(np.add((point1[0], point1[1]), (pct1*deltax, pct1*deltay))),
+            tuple(np.add((point1[0], point1[1]), (pct2*deltax, pct2*deltay))),
+        )
+        return clipped, side
 
     @staticmethod
     def build_from_file(path):
