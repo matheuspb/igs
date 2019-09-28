@@ -65,7 +65,7 @@ class MainWindow:
                 color=(1, 0, 1)))
         self._world.add_object(
             Object(
-                [(-80, -100), (-50, -150), (-20, -100), (-80, -100)],
+                [(-50, 0), (0, (100/2)*(np.sqrt(3))), (50, 0), (-50, 0)],
                 color=(0, 1, 0)))
 
         # create tree view that shows object names
@@ -89,14 +89,15 @@ class MainWindow:
         self._builder.get_object("main_window").show_all()
 
     def _on_draw(self, _, ctx):
-        ctx.set_line_width(2)
+        ctx.set_line_width(1)
         for points, color in \
                 self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
-            ctx.set_source_rgb(*color)
-            ctx.move_to(*points[0])
-            for point in points[1:]:
-                ctx.line_to(*point)
-            ctx.stroke()
+            if points:
+                ctx.set_source_rgb(*color)
+                ctx.move_to(*points[0])
+                for point in points[1:]:
+                    ctx.line_to(*point)
+                ctx.stroke()
 
     def _get_selected(self):
         tree, pos = self._builder.get_object("object_tree") \
@@ -167,9 +168,7 @@ class MainWindow:
             self._builder.get_object("main_window"), "Enter the coordinates",
             Object.default_name(), "0,0;50,0;50,50")
         if dialog.run():
-            points = dialog.points
-            if dialog.wrap:
-                points.append(points[0])
-            self._world.add_object(Object(points, dialog.name, dialog.color))
+            self._world.add_object(
+                Object(dialog.points, dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()

@@ -92,6 +92,77 @@ class Object:
                 [np.sin(angle), np.cos(angle)],
             ], center)
 
+    def clip(self, window):
+        """ Weiler-Atherton polygon clipping algorithm. """
+
+        def connect_points(clipped, side1, side2, window):
+            """ Connects points of the window. """
+            edge = side1
+            while edge != side2:
+                clipped.append(window.points[edge])
+                edge = (edge - 1) % 4
+
+        boundaries = window.real_boundaries
+        clipped = []
+        entered, exited = None, None
+        for i in range(len(self._points) - 1):
+            points, side = Object._clip_line(
+                self._points[i], self._points[i + 1],
+                *boundaries[0], *boundaries[1])
+
+            if not points:  # clipped line is outside window
+                continue
+
+            if side[0] is not None:  # entered
+                if exited is not None:
+                    connect_points(clipped, exited, side[0], window)
+                else:
+                    entered = side[0]
+
+            if side[1] is not None:  # exited
+                exited = side[1]
+                clipped.append(points[0])
+                clipped.append(points[1])
+            else:
+                clipped.append(points[0])
+
+        if clipped:
+            if entered is not None:
+                connect_points(clipped, exited, entered, window)
+            clipped.append(clipped[0])
+
+        self._points = clipped
+
+    @staticmethod
+    def _clip_line(point1, point2, xmin, ymin, xmax, ymax):
+        """ Liang-Barsky line clipping algorithm. """
+        deltax, deltay = point2[0] - point1[0], point2[1] - point1[1]
+        deltas = [-deltax, -deltay, deltax, deltay]  # p
+        distances = [  # q
+            point1[0] - xmin, point1[1] - ymin,
+            xmax - point1[0], ymax - point1[1]]
+        ratios = np.divide(distances, deltas)  # r
+        pct1, pct2 = 0, 1  # how much of the line is inside the window
+        side = [None, None]
+        for i in range(4):
+            if deltas[i] == 0 and distances[i] < 0:
+                return (), side
+            if deltas[i] < 0:
+                if ratios[i] > pct1:  # entered
+                    side[0] = i
+                    pct1 = ratios[i]
+            if deltas[i] > 0:
+                if ratios[i] < pct2:  # exited
+                    side[1] = i
+                    pct2 = ratios[i]
+        if pct1 > pct2:
+            return (), side
+        clipped = (
+            tuple(np.add((point1[0], point1[1]), (pct1*deltax, pct1*deltay))),
+            tuple(np.add((point1[0], point1[1]), (pct2*deltax, pct2*deltay))),
+        )
+        return clipped, side
+
     @staticmethod
     def build_from_file(path):
         """ Returns objects described in an OBJ file. """
@@ -122,29 +193,36 @@ class Window(Object):
         drawn at the viewport.
     """
 
+    BORDER = 0.05
+
     def __init__(self, width, height):
         points = [
             (-width/2, height/2),
-            (width/2, height/2),
-            (width/2, -height/2),
             (-width/2, -height/2),
+            (width/2, -height/2),
+            (width/2, height/2),
         ]
         points.append(points[0])
-        super().__init__(points, "window")
+        super().__init__(points, "window", (0, 0, 0))
 
     @property
-    def boundaries(self):
+    def expanded_boundaries(self):
+        width = self._points[3][0] - self._points[1][0]
+        height = self._points[3][1] - self._points[1][1]
+        factor = np.multiply((width, height), Window.BORDER)
+        return (
+            np.subtract(self._points[1], factor),
+            np.add(self._points[3], factor))
+
+    @property
+    def real_boundaries(self):
         """ Returns windows' bottom left and upper right coordinates. """
-        return (self._points[3], self._points[1])
-
-    @property
-    def points(self):
-        return [(0, 0)]  # window shouldn't be drawn
+        return (self._points[1], self._points[3])
 
     @property
     def angle(self):
         """ Returns the angle of the 'view up' vector. """
-        window_up = np.subtract(self._points[0], self._points[3])
+        window_up = np.subtract(self._points[0], self._points[1])
         return np.arctan2(1, 0) - np.arctan2(window_up[1], window_up[0])
 
     def move(self, offset):
@@ -164,11 +242,14 @@ class Window(Object):
         super().zoom(factor**(-1))
 
         # find new window size
-        minimum, maximum = self.boundaries
-        width = maximum[0] - minimum[0]
-        height = maximum[1] - minimum[1]
+        minimum, maximum = self.real_boundaries
+        width = np.abs(maximum[0] - minimum[0])
+        height = np.abs(maximum[1] - minimum[1])
 
         # if zoom was exceeded, go back to original state and raise an error
         if width < 10 and height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
+
+    def clip(self, _):
+        pass

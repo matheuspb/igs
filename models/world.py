@@ -30,11 +30,17 @@ class World:
         virtual_world = deepcopy(self._objects)
         angle = self["window"].angle
         window_center = self["window"].center
+
         # rotate all objects to appear that the window rotated
         for obj in virtual_world.values():
             obj.rotate(-angle, window_center)
 
-        (x_min, y_min), (x_max, y_max) = virtual_world["window"].boundaries
+        # clip objects
+        for obj in virtual_world.values():
+            obj.clip(virtual_world["window"])
+
+        (x_min, y_min), (x_max, y_max) = \
+            virtual_world["window"].expanded_boundaries
 
         def transform_point(point):
             newx = ((point[0] - x_min)/(x_max - x_min)) * viewport_width

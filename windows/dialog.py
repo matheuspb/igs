@@ -60,11 +60,6 @@ class EntryDialog(Gtk.MessageDialog):
         self._blue_entry.set_text("0")
         hbox.pack_start(self._blue_entry, False, False, EntryDialog.PADDING)
 
-        # build the wrap object check box
-        self._check = Gtk.CheckButton("Connect last point to the first one")
-        self._check.set_active(True)
-        self.vbox.pack_start(self._check, False, False, 0)
-
         # show widgets inside vbox
         self.vbox.show_all()
 
@@ -87,8 +82,9 @@ class EntryDialog(Gtk.MessageDialog):
     @property
     def points(self):
         """ Points of the wireframe. """
-        points = map(
-            lambda p: p.split(","), self._points_entry.get_text().split(";"))
+        points = list(map(
+            lambda p: p.split(","), self._points_entry.get_text().split(";")))
+        points.append(points[0])
         return [(int(point[0]), int(point[1])) for point in points]
 
     @property
@@ -98,8 +94,3 @@ class EntryDialog(Gtk.MessageDialog):
         green = int(self._green_entry.get_text()) / 255
         blue = int(self._blue_entry.get_text()) / 255
         return red, green, blue
-
-    @property
-    def wrap(self):
-        """ Wrap last point to the first one or not. """
-        return self._check.get_active()
