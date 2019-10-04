@@ -39,8 +39,8 @@ class Object:
     @property
     def center(self):
         """ Center of the object. """
-        x_points = [point[0] for point in set(self._points)]
-        y_points = [point[1] for point in set(self._points)]
+        x_points = [point[0] for point in set(self.points)]
+        y_points = [point[1] for point in set(self.points)]
         return (np.average(x_points), np.average(y_points))
 
     def _transform(self, matrix, center=None):
@@ -252,4 +252,34 @@ class Window(Object):
             raise RuntimeError("Maximum zoom in exceeded")
 
     def clip(self, _):
+        pass
+
+
+class Curve(Object):
+
+    def __init__(self, points, name=None, color=None):
+        super().__init__(points=points, name=name, color=color)
+
+    @property
+    def points(self):
+
+        def f(t, i):
+            m_h = np.array([
+                [-1, 3, -3, 1],
+                [3, -6, 3, 0],
+                [-3, 3, 0, 0],
+                [1, 0, 0, 0],
+            ])
+            gh_i = np.array([p[i] for p in self._points])
+            M = np.dot(m_h, gh_i)
+            T = [t**3, t**2, t, 1]
+            return np.dot(T, M)
+
+        step = 0.02
+        x = [f(t, 0) for t in np.arange(0, 1+step, step)]
+        y = [f(t, 1) for t in np.arange(0, 1+step, step)]
+
+        return list(zip(x, y))
+
+    def clip(self, window):
         pass
