@@ -39,8 +39,8 @@ class Object:
     @property
     def center(self):
         """ Center of the object. """
-        x_points = [point[0] for point in set(self.points)]
-        y_points = [point[1] for point in set(self.points)]
+        x_points = [point[0] for point in set(self._points)]
+        y_points = [point[1] for point in set(self._points)]
         return (np.average(x_points), np.average(y_points))
 
     def _transform(self, matrix, center=None):
@@ -126,7 +126,7 @@ class Object:
             else:
                 clipped.append(points[0])
 
-        if clipped:
+        if clipped and self.points[0] == self.points[-1]:
             if entered is not None:
                 connect_points(clipped, exited, entered, window)
             clipped.append(clipped[0])
@@ -258,11 +258,13 @@ class Window(Object):
 class Curve(Object):
 
     def __init__(self, points, name=None, color=None):
-        super().__init__(points=points, name=name, color=color)
+        curve = Curve._generate_curve(points)
+        curve.append(points[-1])  # add stub point for clipping
+        super().__init__(
+            points=curve, name=name, color=color)
 
-    @property
-    def points(self):
-
+    @staticmethod
+    def _generate_curve(points):
         def f(t, i):
             m_h = np.array([
                 [-1, 3, -3, 1],
@@ -270,7 +272,7 @@ class Curve(Object):
                 [-3, 3, 0, 0],
                 [1, 0, 0, 0],
             ])
-            gh_i = np.array([p[i] for p in self._points])
+            gh_i = np.array([p[i] for p in points])
             M = np.dot(m_h, gh_i)
             T = [t**3, t**2, t, 1]
             return np.dot(T, M)
@@ -280,6 +282,3 @@ class Curve(Object):
         y = [f(t, 1) for t in np.arange(0, 1+step, step)]
 
         return list(zip(x, y))
-
-    def clip(self, window):
-        pass
