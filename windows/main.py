@@ -69,7 +69,9 @@ class MainWindow:
                 [(-50, 0), (0, (100/2)*(np.sqrt(3))), (50, 0), (-50, 0)],
                 color=(0, 1, 0)))
         self._world.add_object(
-            Curve([(-100,0), (0,100), (50,-200), (100,0)], color=(1, 0, 0)))
+            Curve(
+                [(-100, 0), (0, 100), (50, -200), (100, 0)],
+                color=(1, 0, 0)))
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)

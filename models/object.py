@@ -207,6 +207,7 @@ class Window(Object):
 
     @property
     def expanded_boundaries(self):
+        """ Boundaries a little bigger than the actual window. """
         width = self._points[3][0] - self._points[1][0]
         height = self._points[3][1] - self._points[1][1]
         factor = np.multiply((width, height), Window.BORDER)
@@ -256,6 +257,7 @@ class Window(Object):
 
 
 class Curve(Object):
+    """ A Bezier curve with four control points. """
 
     def __init__(self, points, name=None, color=None):
         curve = Curve._generate_curve(points)
@@ -266,19 +268,15 @@ class Curve(Object):
     @staticmethod
     def _generate_curve(points):
         def f(t, i):
-            m_h = np.array([
+            return np.array([t**3, t**2, t, 1]).dot(np.array([
                 [-1, 3, -3, 1],
                 [3, -6, 3, 0],
                 [-3, 3, 0, 0],
                 [1, 0, 0, 0],
-            ])
-            gh_i = np.array([p[i] for p in points])
-            M = np.dot(m_h, gh_i)
-            T = [t**3, t**2, t, 1]
-            return np.dot(T, M)
+            ])).dot(np.array([p[i] for p in points]))
 
         step = 0.02
-        x = [f(t, 0) for t in np.arange(0, 1+step, step)]
-        y = [f(t, 1) for t in np.arange(0, 1+step, step)]
+        x_points = [f(t, 0) for t in np.arange(0, 1+step, step)]
+        y_points = [f(t, 1) for t in np.arange(0, 1+step, step)]
 
-        return list(zip(x, y))
+        return list(zip(x_points, y_points))
