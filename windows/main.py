@@ -4,7 +4,7 @@ from enum import Enum
 from gi.repository import Gtk
 import numpy as np
 
-from models.object import Object
+from models.object import Curve, Object
 from models.world import World
 from .dialog import EntryDialog
 
@@ -52,6 +52,7 @@ class MainWindow:
             "on_menu_bar_open": self._open_file,
             "on_menu_bar_quit": Gtk.main_quit,
             "on_create_wireframe": self._create_wireframe,
+            "on_create_curve": self._create_curve,
         }
         self._builder.connect_signals(handlers)
         self._builder.get_object("viewport").set_size_request(
@@ -67,6 +68,10 @@ class MainWindow:
             Object(
                 [(-50, 0), (0, (100/2)*(np.sqrt(3))), (50, 0), (-50, 0)],
                 color=(0, 1, 0)))
+        self._world.add_object(
+            Curve(
+                [(-100, 0), (0, 100), (50, -200), (100, 0)],
+                color=(1, 0, 0)))
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)
@@ -170,5 +175,17 @@ class MainWindow:
         if dialog.run():
             self._world.add_object(
                 Object(dialog.points, dialog.name, dialog.color))
+            self._store.append([dialog.name])
+        dialog.destroy()
+
+    @_Decorators.needs_redraw
+    def _create_curve(self, _):
+        """ Prompts the user for the control points of a Bezier curve. """
+        dialog = EntryDialog(
+            self._builder.get_object("main_window"), "Enter the points",
+            Object.default_name(), "-100,0;300,200;-100,300;100,0")
+        if dialog.run():
+            self._world.add_object(
+                Curve(dialog.points[:4], dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()

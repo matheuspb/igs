@@ -108,6 +108,16 @@
                         <signal name="activate" handler="on_create_wireframe" swapped="no"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkImageMenuItem">
+                        <property name="label" translatable="yes">_Curve</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_create_curve" swapped="no"/>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
