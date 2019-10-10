@@ -53,6 +53,7 @@ class MainWindow:
             "on_menu_bar_quit": Gtk.main_quit,
             "on_create_wireframe": self._create_wireframe,
             "on_create_curve": self._create_curve,
+            "on_create_spline": self._create_spline,
         }
         self._builder.connect_signals(handlers)
         self._builder.get_object("viewport").set_size_request(
@@ -187,8 +188,10 @@ class MainWindow:
             self._builder.get_object("main_window"), "Enter the coordinates",
             Object.default_name(), "0,0;50,0;50,50")
         if dialog.run():
+            points = dialog.points
+            points.append(points[0])
             self._world.add_object(
-                Object(dialog.points, dialog.name, dialog.color))
+                Object(points, dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()
 
@@ -201,5 +204,18 @@ class MainWindow:
         if dialog.run():
             self._world.add_object(
                 Curve(dialog.points[:4], dialog.name, dialog.color))
+            self._store.append([dialog.name])
+        dialog.destroy()
+
+    @_Decorators.needs_redraw
+    def _create_spline(self, _):
+        """ Prompts the user for the control points of a Spline curve. """
+        dialog = EntryDialog(
+            self._builder.get_object("main_window"), "Enter the points",
+            Object.default_name(),
+            "-300,0;-200,50;-100,200;0,300;100,-500;200,-400;300,-200;900,0")
+        if dialog.run():
+            self._world.add_object(
+                Spline(dialog.points, dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()
