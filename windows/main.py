@@ -4,7 +4,7 @@ from enum import Enum
 from gi.repository import Gtk
 import numpy as np
 
-from models.object import Curve, Object
+from models.object import Curve, Object, Spline
 from models.world import World
 from .dialog import EntryDialog
 
@@ -70,8 +70,22 @@ class MainWindow:
                 color=(0, 1, 0)))
         self._world.add_object(
             Curve(
-                [(-100, 0), (0, 100), (50, -200), (100, 0)],
+                [(-100, 100), (100, 0), (0, -100), (100, -100)],
                 color=(1, 0, 0)))
+        self._world.add_object(
+            Spline(
+                [
+                    (-400, 0),
+                    (-300, -200),
+                    (-200, 0),
+                    (-100, 200),
+                    (0, 0),
+                    (100, -200),
+                    (200, 0),
+                    (300, 200),
+                    (400, 0),
+                ],
+                color=(1, 0.5, 0.75)))
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)
