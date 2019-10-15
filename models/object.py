@@ -39,58 +39,76 @@ class Object:
     @property
     def center(self):
         """ Center of the object. """
-        x_points = [point[0] for point in set(self._points)]
-        y_points = [point[1] for point in set(self._points)]
-        return (np.average(x_points), np.average(y_points))
+        points = set()
+        for face in self._points:
+            points.update(face)
+        x_points = [point[0] for point in points]
+        y_points = [point[1] for point in points]
+        z_points = [point[2] for point in points]
+        return \
+            (np.average(x_points), np.average(y_points), np.average(z_points))
 
-    def _transform(self, matrix, center=None):
+    def _transform(self, matrix, center=None, offset=None):
         center = self.center if center is None else center
 
         # move object to center
         operation_matrix = np.array([
-            [1, 0, 0],
-            [0, 1, 0],
-            [-center[0], -center[1], 1],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [-center[0], -center[1], -center[2], 1],
         ])
 
         # perform operation
         operation_matrix = operation_matrix.dot([
             matrix[0] + [0],
             matrix[1] + [0],
-            [0, 0, 1],
+            matrix[2] + [0],
+            ([0, 0, 0] if offset is None else offset) + [1],
         ])
 
         # move object back to original position
         operation_matrix = operation_matrix.dot([
-            [1, 0, 0],
-            [0, 1, 0],
-            [center[0], center[1], 1],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [center[0], center[1], center[2], 1],
         ])
 
-        for pos, point in enumerate(self._points):
-            new_point = np.dot(point + (1,), operation_matrix)
-            self._points[pos] = tuple(new_point[:2])
+        for fpos, face in enumerate(self._points):
+            for ppos, point in enumerate(face):
+                new_point = np.dot(point + (1,), operation_matrix)
+                self._points[fpos][ppos] = tuple(new_point[:3])
 
     def move(self, offset):
         """ Moves the object by an offset = (x, y). """
-        for pos, point in enumerate(self._points):
-            self._points[pos] = tuple(np.add(point, offset))
+        self._transform(
+            [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+            ], center=None, offset=list(offset))
 
     def zoom(self, factor):
         """ Zooms in the object by 'factor' times. """
         self._transform(
             [
-                [factor, 0],
-                [0, factor],
+                [factor, 0, 0],
+                [0, factor, 0],
+                [0, 0, factor],
             ])
 
     def rotate(self, angle, center=None):
         """ Rotates the object around center, the angle is in radians. """
         self._transform(
             [
-                [np.cos(angle), -np.sin(angle)],
-                [np.sin(angle), np.cos(angle)],
+                [np.cos(angle), -np.sin(angle), 0],
+                [np.sin(angle), np.cos(angle), 0],
+                [0, 0, 1],
             ], center)
+
+    def project(self):
+        self._points = [[point[:2] for point in face] for face in self._points]
 
     def clip(self, window):
         """ Weiler-Atherton polygon clipping algorithm. """
@@ -99,37 +117,40 @@ class Object:
             """ Connects points of the window. """
             edge = side1
             while edge != side2:
-                clipped.append(window.points[edge])
+                clipped.append(window.points[0][edge])
                 edge = (edge - 1) % 4
 
         boundaries = window.real_boundaries
         clipped = []
-        entered, exited = None, None
-        for i in range(len(self._points) - 1):
-            points, side = Object._clip_line(
-                self._points[i], self._points[i + 1],
-                *boundaries[0], *boundaries[1])
+        for face in self._points:
+            new_face = []
+            entered, exited = None, None
+            for i in range(len(face) - 1):
+                points, side = Object._clip_line(
+                    face[i], face[i + 1], *boundaries[0], *boundaries[1])
 
-            if not points:  # clipped line is outside window
-                continue
+                if not points:  # clipped line is outside window
+                    continue
 
-            if side[0] is not None:  # entered
-                if exited is not None:
-                    connect_points(clipped, exited, side[0], window)
+                if side[0] is not None:  # entered
+                    if exited is not None:
+                        connect_points(new_face, exited, side[0], window)
+                    else:
+                        entered = side[0]
+
+                if side[1] is not None:  # exited
+                    exited = side[1]
+                    new_face.append(points[0])
+                    new_face.append(points[1])
                 else:
-                    entered = side[0]
+                    new_face.append(points[0])
 
-            if side[1] is not None:  # exited
-                exited = side[1]
-                clipped.append(points[0])
-                clipped.append(points[1])
-            else:
-                clipped.append(points[0])
+            if new_face and face[0] == face[-1]:
+                if entered is not None:
+                    connect_points(new_face, exited, entered, window)
+                new_face.append(new_face[0])
 
-        if clipped and self.points[0] == self.points[-1]:
-            if entered is not None:
-                connect_points(clipped, exited, entered, window)
-            clipped.append(clipped[0])
+            clipped.append(new_face)
 
         self._points = clipped
 
@@ -174,14 +195,14 @@ class Object:
         faces = []
         for number, line in enumerate(file_lines):
             if line[0] == "v":
-                vertices[number + 1] = (int(line[1]), int(line[2]))
+                vertices[number + 1] = tuple(map(float, line[1:]))
             if line[0] == "f":
                 face = []
                 for index in line[1:]:
                     face.append(vertices[int(index)])
                 face.append(vertices[int(line[1])])
                 faces.append(face)
-        return [Object(points=face) for face in faces]
+        return Object(points=faces)
 
 
 class Window(Object):
@@ -197,41 +218,42 @@ class Window(Object):
 
     def __init__(self, width, height):
         points = [
-            (-width/2, height/2),
-            (-width/2, -height/2),
-            (width/2, -height/2),
-            (width/2, height/2),
+            (-width/2, height/2, 0),
+            (-width/2, -height/2, 0),
+            (width/2, -height/2, 0),
+            (width/2, height/2, 0),
         ]
         points.append(points[0])
-        super().__init__(points, "window", (0, 0, 0))
+        super().__init__([points], "window", (0, 0, 0))
 
     @property
     def expanded_boundaries(self):
         """ Boundaries a little bigger than the actual window. """
-        width = self._points[3][0] - self._points[1][0]
-        height = self._points[3][1] - self._points[1][1]
+        width = self._points[0][3][0] - self._points[0][1][0]
+        height = self._points[0][3][1] - self._points[0][1][1]
         factor = np.multiply((width, height), Window.BORDER)
         return (
-            np.subtract(self._points[1], factor),
-            np.add(self._points[3], factor))
+            np.subtract(self._points[0][1], factor),
+            np.add(self._points[0][3], factor))
 
     @property
     def real_boundaries(self):
         """ Returns windows' bottom left and upper right coordinates. """
-        return (self._points[1], self._points[3])
+        return (self._points[0][1], self._points[0][3])
 
     @property
     def angle(self):
         """ Returns the angle of the 'view up' vector. """
-        window_up = np.subtract(self._points[0], self._points[1])
+        window_up = np.subtract(self._points[0][0], self._points[0][1])
         return np.arctan2(1, 0) - np.arctan2(window_up[1], window_up[0])
 
     def move(self, offset):
         angle = self.angle
         # rotate offset angle so movements are relative to window's angle
         offset = np.dot(offset, [
-            [np.cos(angle), -np.sin(angle)],
-            [np.sin(angle), np.cos(angle)],
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
         ])
         super().move(offset)
 
