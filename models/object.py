@@ -234,6 +234,7 @@ class Window(Object):
         ]
         points.append(points[0])
         super().__init__([points], "window", (0, 0, 0))
+        self._angles = np.array([0, 0, 0])
 
     @property
     def expanded_boundaries(self):
@@ -251,13 +252,11 @@ class Window(Object):
         return (self._points[0][1], self._points[0][3])
 
     @property
-    def angle(self):
-        """ Returns the angle of the 'view up' vector. """
-        window_up = np.subtract(self._points[0][0], self._points[0][1])
-        return np.arctan2(1, 0) - np.arctan2(window_up[1], window_up[0])
+    def angles(self):
+        return self._angles
 
     def move(self, offset):
-        angle = self.angle
+        angle = 0  # TODO move relative to window angle
         # rotate offset angle so movements are relative to window's angle
         offset = np.dot(offset, [
             [np.cos(angle), -np.sin(angle), 0],
@@ -282,6 +281,10 @@ class Window(Object):
         if width < 10 and height < 10:
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
+
+    def rotate(self, x_angle, y_angle, z_angle, center=None):
+        self._angles = np.add(self._angles, [x_angle, y_angle, z_angle])
+        super().rotate(x_angle, y_angle, z_angle)
 
     def clip(self, _):
         pass
