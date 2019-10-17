@@ -284,7 +284,7 @@ class Window(Object):
 
     def rotate(self, x_angle, y_angle, z_angle, center=None):
         self._angles = np.add(self._angles, [x_angle, y_angle, z_angle])
-        super().rotate(x_angle, y_angle, z_angle)
+        super().rotate(x_angle, y_angle, z_angle, center)
 
     def clip(self, _):
         pass

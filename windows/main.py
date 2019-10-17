@@ -145,7 +145,7 @@ class MainWindow:
         elif mode == str(MainWindow._Rotation.WINDOW):
             obj.rotate(*angles, self._world["window"].center)
         elif mode == str(MainWindow._Rotation.WORLD):
-            obj.rotate(*angles, (0, 0))
+            obj.rotate(*angles, (0, 0, 0))
 
     @_Decorators.needs_redraw
     def _open_file(self, _):
