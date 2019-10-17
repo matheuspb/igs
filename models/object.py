@@ -98,14 +98,23 @@ class Object:
                 [0, 0, factor],
             ])
 
-    def rotate(self, angle, center=None):
+    def rotate(self, x_angle, y_angle, z_angle, center=None):
         """ Rotates the object around center, the angle is in radians. """
-        self._transform(
-            [
-                [np.cos(angle), -np.sin(angle), 0],
-                [np.sin(angle), np.cos(angle), 0],
-                [0, 0, 1],
-            ], center)
+        matrix = np.array([
+            [1, 0, 0],
+            [0, np.cos(x_angle), -np.sin(x_angle)],
+            [0, np.sin(x_angle), np.cos(x_angle)],
+        ]).dot([
+            [np.cos(y_angle), 0, np.sin(y_angle)],
+            [0, 1, 0],
+            [-np.sin(y_angle), 0, np.cos(y_angle)],
+        ]).dot([
+            [np.cos(z_angle), -np.sin(z_angle), 0],
+            [np.sin(z_angle), np.cos(z_angle), 0],
+            [0, 0, 1],
+        ])
+
+        self._transform(matrix.tolist(), center)
 
     def project(self):
         self._points = [[point[:2] for point in face] for face in self._points]

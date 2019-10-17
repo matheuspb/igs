@@ -126,15 +126,24 @@ class MainWindow:
         """ Rotates the selected object left or right. """
         angle = np.radians(
             int(self._builder.get_object("angle_entry").get_text()))
-        angle = angle if right else -angle
+        angles = [angle if right else -angle] * 3
         obj = self._world[self._get_selected()]
+
+        should_rotate = [
+            self._builder.get_object("{}_rotation".format(axis)).get_active()
+            for axis in ["x", "y", "z"]
+        ]
+        for pos, rotate in enumerate(should_rotate):
+            if not rotate:
+                angles[pos] = 0
+
         mode = self._builder.get_object("rotation_modes").get_active_text()
         if mode == str(MainWindow._Rotation.OBJECT):
-            obj.rotate(angle)
+            obj.rotate(*angles)
         elif mode == str(MainWindow._Rotation.WINDOW):
-            obj.rotate(angle, self._world["window"].center)
+            obj.rotate(*angles, self._world["window"].center)
         elif mode == str(MainWindow._Rotation.WORLD):
-            obj.rotate(angle, (0, 0))
+            obj.rotate(*angles, (0, 0))
 
     @_Decorators.needs_redraw
     def _open_file(self, _):

@@ -33,7 +33,7 @@ class World:
 
         # rotate all objects to appear that the window rotated
         for obj in virtual_world.values():
-            obj.rotate(-angle, window_center)
+            obj.rotate(0, 0, -angle, window_center)
 
         # clip objects
         for obj in virtual_world.values():
