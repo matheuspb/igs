@@ -42,6 +42,8 @@ class MainWindow:
             "on_button_down_clicked": lambda _: self._move_object(0, -1, 0),
             "on_button_left_clicked": lambda _: self._move_object(-1, 0, 0),
             "on_button_right_clicked": lambda _: self._move_object(1, 0, 0),
+            "on_button_in_clicked": lambda _: self._move_object(0, 0, -1),
+            "on_button_out_clicked": lambda _: self._move_object(0, 0, 1),
             "on_zoom_in": lambda _: self._zoom_object(zoom_in=True),
             "on_zoom_out": lambda _: self._zoom_object(zoom_in=False),
             "on_button_rotate_right_clicked":
