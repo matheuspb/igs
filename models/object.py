@@ -100,6 +100,7 @@ class Object:
 
     @staticmethod
     def generate_rotation_matrix(x_angle, y_angle, z_angle):
+        """ Generates the matrix that rotates points. """
         return np.array([
             [1, 0, 0],
             [0, np.cos(x_angle), -np.sin(x_angle)],
@@ -121,6 +122,7 @@ class Object:
             center)
 
     def project(self):
+        """ Projects the 3D objects to 2D. Using parallel projection. """
         self._points = [[point[:2] for point in face] for face in self._points]
 
     def clip(self, window):
@@ -257,6 +259,7 @@ class Window(Object):
 
     @property
     def angles(self):
+        """ Returns how much the window is rotated. """
         return self._angles
 
     def move(self, offset):
@@ -282,6 +285,7 @@ class Window(Object):
             raise RuntimeError("Maximum zoom in exceeded")
 
     def rotate(self, x_angle, y_angle, z_angle, center=None):
+        # update _angles variable for later
         self._angles = np.add(self._angles, [x_angle, y_angle, z_angle])
         super().rotate(x_angle, y_angle, z_angle, center)
 
