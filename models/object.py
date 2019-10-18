@@ -298,9 +298,9 @@ class Curve(Object):
 
     def __init__(self, points, name=None, color=None):
         curve = Curve._generate_curve(points)
-        curve.append(points[-1])  # add stub point for clipping
+        curve.append(curve[-1])  # add stub point for clipping
         super().__init__(
-            points=curve, name=name, color=color)
+            points=[curve], name=name, color=color)
 
     @staticmethod
     def _generate_curve(points):
@@ -315,20 +315,23 @@ class Curve(Object):
         step = 0.02
         x_points = [f(t, 0) for t in np.arange(0, 1+step, step)]
         y_points = [f(t, 1) for t in np.arange(0, 1+step, step)]
+        z_points = [f(t, 2) for t in np.arange(0, 1+step, step)]
 
-        return list(zip(x_points, y_points))
+        return list(zip(x_points, y_points, z_points))
 
 
 class Spline(Object):
     """ A Spline curve with arbitrary amount of control points. """
 
     def __init__(self, points, name=None, color=None):
-        curve = []
+        curves = []
         for i in range(len(points) - 3):
             # build a curve for every four control points
-            curve += Spline._generate_curve(points[i:i+4])
+            curve = Spline._generate_curve(points[i:i+4])
+            curve.append(curve[-1])  # add stub point for clipping
+            curves.append(curve)
         super().__init__(
-            points=curve, name=name, color=color)
+            points=curves, name=name, color=color)
 
     @staticmethod
     def _generate_curve(points):

@@ -186,7 +186,7 @@ class MainWindow:
         """ Prompts the user for the control points of a Bezier curve. """
         dialog = EntryDialog(
             self._builder.get_object("main_window"), "Enter the points",
-            Object.default_name(), "-100,0;300,200;-100,300;100,0")
+            Object.default_name(), "-100,0,0;300,200,0;-100,300,0;100,0,0")
         if dialog.run():
             self._world.add_object(
                 Curve(dialog.points[:4], dialog.name, dialog.color))
@@ -199,7 +199,14 @@ class MainWindow:
         dialog = EntryDialog(
             self._builder.get_object("main_window"), "Enter the points",
             Object.default_name(),
-            "-300,0;-200,50;-100,200;0,300;100,-500;200,-400;300,-200;900,0")
+            "-300,0,0;"
+            "-200,50,0;"
+            "-100,200,0;"
+            "0,300,0;"
+            "100,-500,0;"
+            "200,-400,0;"
+            "300,-200,0;"
+            "900,0,0")
         if dialog.run():
             self._world.add_object(
                 Spline(dialog.points, dialog.name, dialog.color))
