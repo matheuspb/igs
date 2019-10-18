@@ -98,9 +98,9 @@ class Object:
                 [0, 0, factor],
             ])
 
-    def rotate(self, x_angle, y_angle, z_angle, center=None):
-        """ Rotates the object around center, the angle is in radians. """
-        matrix = np.array([
+    @staticmethod
+    def generate_rotation_matrix(x_angle, y_angle, z_angle):
+        return np.array([
             [1, 0, 0],
             [0, np.cos(x_angle), -np.sin(x_angle)],
             [0, np.sin(x_angle), np.cos(x_angle)],
@@ -112,9 +112,13 @@ class Object:
             [np.cos(z_angle), -np.sin(z_angle), 0],
             [np.sin(z_angle), np.cos(z_angle), 0],
             [0, 0, 1],
-        ])
+        ]).tolist()
 
-        self._transform(matrix.tolist(), center)
+    def rotate(self, x_angle, y_angle, z_angle, center=None):
+        """ Rotates the object around center, the angle is in radians. """
+        self._transform(
+            Object.generate_rotation_matrix(x_angle, y_angle, z_angle),
+            center)
 
     def project(self):
         self._points = [[point[:2] for point in face] for face in self._points]
@@ -256,13 +260,8 @@ class Window(Object):
         return self._angles
 
     def move(self, offset):
-        angle = 0  # TODO move relative to window angle
-        # rotate offset angle so movements are relative to window's angle
-        offset = np.dot(offset, [
-            [np.cos(angle), -np.sin(angle), 0],
-            [np.sin(angle), np.cos(angle), 0],
-            [0, 0, 1],
-        ])
+        # rotate offset vector to move window relative to its own directions
+        offset = np.dot(offset, Object.generate_rotation_matrix(*self.angles))
         super().move(offset)
 
     def zoom(self, factor):
