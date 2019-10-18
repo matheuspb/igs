@@ -240,7 +240,10 @@ class Window(Object):
         ]
         points.append(points[0])
         super().__init__([points], "window", (0, 0, 0))
-        self._angles = np.array([0, 0, 0])
+        self._rotation_matrix = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]])
 
     @property
     def expanded_boundaries(self):
@@ -258,13 +261,13 @@ class Window(Object):
         return (self._points[0][1], self._points[0][3])
 
     @property
-    def angles(self):
-        """ Returns how much the window is rotated. """
-        return self._angles
+    def inv_rotation_matrix(self):
+        """ This matrix rotates the window back to its original position. """
+        return np.linalg.inv(self._rotation_matrix).tolist()
 
     def move(self, offset):
         # rotate offset vector to move window relative to its own directions
-        offset = np.dot(offset, Object.generate_rotation_matrix(*self.angles))
+        offset = np.dot(offset, self._rotation_matrix)
         super().move(offset)
 
     def zoom(self, factor):
@@ -285,9 +288,15 @@ class Window(Object):
             raise RuntimeError("Maximum zoom in exceeded")
 
     def rotate(self, x_angle, y_angle, z_angle, center=None):
-        # update _angles variable for later
-        self._angles = np.add(self._angles, [x_angle, y_angle, z_angle])
-        super().rotate(x_angle, y_angle, z_angle, center)
+        # find M = R^-1 * T * R
+        # R is the rotation matrix, it saves the rotation state of the window
+        # T is the matrix of the rotation that is being applied
+        matrix = Object.generate_rotation_matrix(x_angle, y_angle, z_angle)
+        matrix = np.dot(self.inv_rotation_matrix, matrix)
+        matrix = np.dot(matrix, self._rotation_matrix)
+        self._transform(matrix.tolist())
+        # update rotation matrix
+        self._rotation_matrix = np.dot(self._rotation_matrix, matrix)
 
     def clip(self, _):
         pass

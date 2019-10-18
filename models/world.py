@@ -1,6 +1,5 @@
 """ This module contains the World class. """
 from copy import deepcopy
-import numpy as np
 
 from models.object import Window
 
@@ -29,12 +28,12 @@ class World:
             the viewport coordinates.
         """
         virtual_world = deepcopy(self._objects)
-        angles = self["window"].angles
+        inv_rotation_matrix = self["window"].inv_rotation_matrix
         window_center = self["window"].center
 
         # rotate all objects to appear that the window rotated
         for obj in virtual_world.values():
-            obj.rotate(*np.negative(angles), window_center)
+            obj._transform(inv_rotation_matrix, window_center)
 
         # clip objects
         for obj in virtual_world.values():
