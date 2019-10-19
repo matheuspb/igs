@@ -28,15 +28,16 @@ class World:
             the viewport coordinates.
         """
         virtual_world = deepcopy(self._objects)
-        angle = self["window"].angle
+        inv_rotation_matrix = self["window"].inv_rotation_matrix
         window_center = self["window"].center
 
         # rotate all objects to appear that the window rotated
         for obj in virtual_world.values():
-            obj.rotate(-angle, window_center)
+            obj._transform(inv_rotation_matrix, window_center)
 
         # clip objects
         for obj in virtual_world.values():
+            obj.project()
             obj.clip(virtual_world["window"])
 
         (x_min, y_min), (x_max, y_max) = \
@@ -48,9 +49,13 @@ class World:
             return (newx, newy)
 
         # build a list of transformed points for each object
-        return [
-            (list(map(transform_point, obj.points)), obj.color)
-            for obj in virtual_world.values()]
+        output = []
+        for obj in virtual_world.values():
+            new_obj = []
+            for face in obj.points:
+                new_obj.append(list(map(transform_point, face)))
+            output.append((new_obj, obj.color))
+        return output
 
     @property
     def objects(self):

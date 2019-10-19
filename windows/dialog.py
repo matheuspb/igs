@@ -6,7 +6,7 @@ from gi.repository import Gtk
 class EntryDialog(Gtk.MessageDialog):
     """ Prompts the user for a list of points that describe a wireframe. """
 
-    POINTS_PATTERN = re.compile(r"^(-?\d+,-?\d+;)*-?\d+,-?\d+$")
+    POINTS_PATTERN = re.compile(r"^(-?\d+,-?\d+,-?\d+;)*-?\d+,-?\d+,-?\d+$")
     PADDING = 10
 
     class _Decorators:
@@ -84,7 +84,7 @@ class EntryDialog(Gtk.MessageDialog):
         """ Points of the wireframe. """
         points = list(map(
             lambda p: p.split(","), self._points_entry.get_text().split(";")))
-        return [(int(point[0]), int(point[1])) for point in points]
+        return [tuple(map(int, point)) for point in points]
 
     @property
     def color(self):

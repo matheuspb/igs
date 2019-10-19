@@ -38,10 +38,12 @@ class MainWindow:
         handlers = {
             "on_destroy": Gtk.main_quit,
             "on_draw": self._on_draw,
-            "on_button_up_clicked": lambda _: self._move_object(0, 1),
-            "on_button_down_clicked": lambda _: self._move_object(0, -1),
-            "on_button_left_clicked": lambda _: self._move_object(-1, 0),
-            "on_button_right_clicked": lambda _: self._move_object(1, 0),
+            "on_button_up_clicked": lambda _: self._move_object(0, 1, 0),
+            "on_button_down_clicked": lambda _: self._move_object(0, -1, 0),
+            "on_button_left_clicked": lambda _: self._move_object(-1, 0, 0),
+            "on_button_right_clicked": lambda _: self._move_object(1, 0, 0),
+            "on_button_in_clicked": lambda _: self._move_object(0, 0, -1),
+            "on_button_out_clicked": lambda _: self._move_object(0, 0, 1),
             "on_zoom_in": lambda _: self._zoom_object(zoom_in=True),
             "on_zoom_out": lambda _: self._zoom_object(zoom_in=False),
             "on_button_rotate_right_clicked":
@@ -59,34 +61,8 @@ class MainWindow:
         self._builder.get_object("viewport").set_size_request(
             *MainWindow.VIEWPORT_SIZE)
 
-        # create some dummy objects
+        # create world
         self._world = World(MainWindow.VIEWPORT_SIZE)
-        self._world.add_object(
-            Object(
-                [(-50, 50), (50, 50), (50, -50), (-50, -50), (-50, 50)],
-                color=(1, 0, 1)))
-        self._world.add_object(
-            Object(
-                [(-50, 0), (0, (100/2)*(np.sqrt(3))), (50, 0), (-50, 0)],
-                color=(0, 1, 0)))
-        self._world.add_object(
-            Curve(
-                [(-100, 100), (100, 0), (0, -100), (100, -100)],
-                color=(1, 0, 0)))
-        self._world.add_object(
-            Spline(
-                [
-                    (-400, 0),
-                    (-300, -200),
-                    (-200, 0),
-                    (-100, 200),
-                    (0, 0),
-                    (100, -200),
-                    (200, 0),
-                    (300, 200),
-                    (400, 0),
-                ],
-                color=(1, 0.5, 0.75)))
 
         # create tree view that shows object names
         self._store = Gtk.ListStore(str)
@@ -110,14 +86,15 @@ class MainWindow:
 
     def _on_draw(self, _, ctx):
         ctx.set_line_width(1)
-        for points, color in \
+        for obj, color in \
                 self._world.viewport_transform(*MainWindow.VIEWPORT_SIZE):
-            if points:
-                ctx.set_source_rgb(*color)
-                ctx.move_to(*points[0])
-                for point in points[1:]:
-                    ctx.line_to(*point)
-                ctx.stroke()
+            ctx.set_source_rgb(*color)
+            for face in obj:
+                if face:
+                    ctx.move_to(*face[0])
+                    for point in face[1:]:
+                        ctx.line_to(*point)
+                    ctx.stroke()
 
     def _get_selected(self):
         tree, pos = self._builder.get_object("object_tree") \
@@ -125,10 +102,10 @@ class MainWindow:
         return "window" if pos is None else tree[pos][0]
 
     @_Decorators.needs_redraw
-    def _move_object(self, x_offset, y_offset):
+    def _move_object(self, x_offset, y_offset, z_offset):
         """ Moves a selected object. """
         step = int(self._builder.get_object("move_step_entry").get_text())
-        offset = (x_offset*step, y_offset*step)
+        offset = (x_offset*step, y_offset*step, z_offset*step)
         self._world[self._get_selected()].move(offset)
 
     @_Decorators.needs_redraw
@@ -151,15 +128,24 @@ class MainWindow:
         """ Rotates the selected object left or right. """
         angle = np.radians(
             int(self._builder.get_object("angle_entry").get_text()))
-        angle = angle if right else -angle
+        angles = [angle if right else -angle] * 3
         obj = self._world[self._get_selected()]
+
+        should_rotate = [
+            self._builder.get_object("{}_rotation".format(axis)).get_active()
+            for axis in ["x", "y", "z"]
+        ]
+        for pos, rotate in enumerate(should_rotate):
+            if not rotate:
+                angles[pos] = 0
+
         mode = self._builder.get_object("rotation_modes").get_active_text()
         if mode == str(MainWindow._Rotation.OBJECT):
-            obj.rotate(angle)
+            obj.rotate(*angles)
         elif mode == str(MainWindow._Rotation.WINDOW):
-            obj.rotate(angle, self._world["window"].center)
+            obj.rotate(*angles, self._world["window"].center)
         elif mode == str(MainWindow._Rotation.WORLD):
-            obj.rotate(angle, (0, 0))
+            obj.rotate(*angles, (0, 0, 0))
 
     @_Decorators.needs_redraw
     def _open_file(self, _):
@@ -172,9 +158,9 @@ class MainWindow:
             ))
 
         if dialog.run() == Gtk.ResponseType.OK:
-            for obj in Object.build_from_file(dialog.get_filename()):
-                self._world.add_object(obj)
-                self._store.append([obj.name])
+            obj = Object.build_from_file(dialog.get_filename())
+            self._world.add_object(obj)
+            self._store.append([obj.name])
 
         dialog.destroy()
 
@@ -200,7 +186,7 @@ class MainWindow:
         """ Prompts the user for the control points of a Bezier curve. """
         dialog = EntryDialog(
             self._builder.get_object("main_window"), "Enter the points",
-            Object.default_name(), "-100,0;300,200;-100,300;100,0")
+            Object.default_name(), "-100,0,0;300,200,0;-100,300,0;100,0,0")
         if dialog.run():
             self._world.add_object(
                 Curve(dialog.points[:4], dialog.name, dialog.color))
@@ -213,7 +199,14 @@ class MainWindow:
         dialog = EntryDialog(
             self._builder.get_object("main_window"), "Enter the points",
             Object.default_name(),
-            "-300,0;-200,50;-100,200;0,300;100,-500;200,-400;300,-200;900,0")
+            "-300,0,0;"
+            "-200,50,0;"
+            "-100,200,0;"
+            "0,300,0;"
+            "100,-500,0;"
+            "200,-400,0;"
+            "300,-200,0;"
+            "900,0,0")
         if dialog.run():
             self._world.add_object(
                 Spline(dialog.points, dialog.name, dialog.color))

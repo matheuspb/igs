@@ -39,58 +39,91 @@ class Object:
     @property
     def center(self):
         """ Center of the object. """
-        x_points = [point[0] for point in set(self._points)]
-        y_points = [point[1] for point in set(self._points)]
-        return (np.average(x_points), np.average(y_points))
+        points = set()
+        for face in self._points:
+            points.update(face)
+        x_points = [point[0] for point in points]
+        y_points = [point[1] for point in points]
+        z_points = [point[2] for point in points]
+        return \
+            (np.average(x_points), np.average(y_points), np.average(z_points))
 
-    def _transform(self, matrix, center=None):
+    def _transform(self, matrix, center=None, offset=None):
         center = self.center if center is None else center
 
         # move object to center
         operation_matrix = np.array([
-            [1, 0, 0],
-            [0, 1, 0],
-            [-center[0], -center[1], 1],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [-center[0], -center[1], -center[2], 1],
         ])
 
         # perform operation
         operation_matrix = operation_matrix.dot([
             matrix[0] + [0],
             matrix[1] + [0],
-            [0, 0, 1],
+            matrix[2] + [0],
+            ([0, 0, 0] if offset is None else offset) + [1],
         ])
 
         # move object back to original position
         operation_matrix = operation_matrix.dot([
-            [1, 0, 0],
-            [0, 1, 0],
-            [center[0], center[1], 1],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [center[0], center[1], center[2], 1],
         ])
 
-        for pos, point in enumerate(self._points):
-            new_point = np.dot(point + (1,), operation_matrix)
-            self._points[pos] = tuple(new_point[:2])
+        for fpos, face in enumerate(self._points):
+            for ppos, point in enumerate(face):
+                new_point = np.dot(point + (1,), operation_matrix)
+                self._points[fpos][ppos] = tuple(new_point[:3])
 
     def move(self, offset):
         """ Moves the object by an offset = (x, y). """
-        for pos, point in enumerate(self._points):
-            self._points[pos] = tuple(np.add(point, offset))
+        self._transform(
+            [
+                [1, 0, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+            ], center=None, offset=list(offset))
 
     def zoom(self, factor):
         """ Zooms in the object by 'factor' times. """
         self._transform(
             [
-                [factor, 0],
-                [0, factor],
+                [factor, 0, 0],
+                [0, factor, 0],
+                [0, 0, factor],
             ])
 
-    def rotate(self, angle, center=None):
+    @staticmethod
+    def generate_rotation_matrix(x_angle, y_angle, z_angle):
+        """ Generates the matrix that rotates points. """
+        return np.array([
+            [1, 0, 0],
+            [0, np.cos(x_angle), -np.sin(x_angle)],
+            [0, np.sin(x_angle), np.cos(x_angle)],
+        ]).dot([
+            [np.cos(y_angle), 0, np.sin(y_angle)],
+            [0, 1, 0],
+            [-np.sin(y_angle), 0, np.cos(y_angle)],
+        ]).dot([
+            [np.cos(z_angle), -np.sin(z_angle), 0],
+            [np.sin(z_angle), np.cos(z_angle), 0],
+            [0, 0, 1],
+        ]).tolist()
+
+    def rotate(self, x_angle, y_angle, z_angle, center=None):
         """ Rotates the object around center, the angle is in radians. """
         self._transform(
-            [
-                [np.cos(angle), -np.sin(angle)],
-                [np.sin(angle), np.cos(angle)],
-            ], center)
+            Object.generate_rotation_matrix(x_angle, y_angle, z_angle),
+            center)
+
+    def project(self):
+        """ Projects the 3D objects to 2D. Using parallel projection. """
+        self._points = [[point[:2] for point in face] for face in self._points]
 
     def clip(self, window):
         """ Weiler-Atherton polygon clipping algorithm. """
@@ -99,37 +132,40 @@ class Object:
             """ Connects points of the window. """
             edge = side1
             while edge != side2:
-                clipped.append(window.points[edge])
+                clipped.append(window.points[0][edge])
                 edge = (edge - 1) % 4
 
         boundaries = window.real_boundaries
         clipped = []
-        entered, exited = None, None
-        for i in range(len(self._points) - 1):
-            points, side = Object._clip_line(
-                self._points[i], self._points[i + 1],
-                *boundaries[0], *boundaries[1])
+        for face in self._points:
+            new_face = []
+            entered, exited = None, None
+            for i in range(len(face) - 1):
+                points, side = Object._clip_line(
+                    face[i], face[i + 1], *boundaries[0], *boundaries[1])
 
-            if not points:  # clipped line is outside window
-                continue
+                if not points:  # clipped line is outside window
+                    continue
 
-            if side[0] is not None:  # entered
-                if exited is not None:
-                    connect_points(clipped, exited, side[0], window)
+                if side[0] is not None:  # entered
+                    if exited is not None:
+                        connect_points(new_face, exited, side[0], window)
+                    else:
+                        entered = side[0]
+
+                if side[1] is not None:  # exited
+                    exited = side[1]
+                    new_face.append(points[0])
+                    new_face.append(points[1])
                 else:
-                    entered = side[0]
+                    new_face.append(points[0])
 
-            if side[1] is not None:  # exited
-                exited = side[1]
-                clipped.append(points[0])
-                clipped.append(points[1])
-            else:
-                clipped.append(points[0])
+            if new_face and face[0] == face[-1]:
+                if entered is not None:
+                    connect_points(new_face, exited, entered, window)
+                new_face.append(new_face[0])
 
-        if clipped and self.points[0] == self.points[-1]:
-            if entered is not None:
-                connect_points(clipped, exited, entered, window)
-            clipped.append(clipped[0])
+            clipped.append(new_face)
 
         self._points = clipped
 
@@ -174,14 +210,14 @@ class Object:
         faces = []
         for number, line in enumerate(file_lines):
             if line[0] == "v":
-                vertices[number + 1] = (int(line[1]), int(line[2]))
+                vertices[number + 1] = tuple(map(float, line[1:]))
             if line[0] == "f":
                 face = []
                 for index in line[1:]:
                     face.append(vertices[int(index)])
                 face.append(vertices[int(line[1])])
                 faces.append(face)
-        return [Object(points=face) for face in faces]
+        return Object(points=faces)
 
 
 class Window(Object):
@@ -197,42 +233,41 @@ class Window(Object):
 
     def __init__(self, width, height):
         points = [
-            (-width/2, height/2),
-            (-width/2, -height/2),
-            (width/2, -height/2),
-            (width/2, height/2),
+            (-width/2, height/2, 0),
+            (-width/2, -height/2, 0),
+            (width/2, -height/2, 0),
+            (width/2, height/2, 0),
         ]
         points.append(points[0])
-        super().__init__(points, "window", (0, 0, 0))
+        super().__init__([points], "window", (0, 0, 0))
+        self._rotation_matrix = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 1]])
 
     @property
     def expanded_boundaries(self):
         """ Boundaries a little bigger than the actual window. """
-        width = self._points[3][0] - self._points[1][0]
-        height = self._points[3][1] - self._points[1][1]
+        width = self._points[0][3][0] - self._points[0][1][0]
+        height = self._points[0][3][1] - self._points[0][1][1]
         factor = np.multiply((width, height), Window.BORDER)
         return (
-            np.subtract(self._points[1], factor),
-            np.add(self._points[3], factor))
+            np.subtract(self._points[0][1], factor),
+            np.add(self._points[0][3], factor))
 
     @property
     def real_boundaries(self):
         """ Returns windows' bottom left and upper right coordinates. """
-        return (self._points[1], self._points[3])
+        return (self._points[0][1], self._points[0][3])
 
     @property
-    def angle(self):
-        """ Returns the angle of the 'view up' vector. """
-        window_up = np.subtract(self._points[0], self._points[1])
-        return np.arctan2(1, 0) - np.arctan2(window_up[1], window_up[0])
+    def inv_rotation_matrix(self):
+        """ This matrix rotates the window back to its original position. """
+        return np.linalg.inv(self._rotation_matrix).tolist()
 
     def move(self, offset):
-        angle = self.angle
-        # rotate offset angle so movements are relative to window's angle
-        offset = np.dot(offset, [
-            [np.cos(angle), -np.sin(angle)],
-            [np.sin(angle), np.cos(angle)],
-        ])
+        # rotate offset vector to move window relative to its own directions
+        offset = np.dot(offset, self._rotation_matrix)
         super().move(offset)
 
     def zoom(self, factor):
@@ -252,6 +287,17 @@ class Window(Object):
             self._points = original_points
             raise RuntimeError("Maximum zoom in exceeded")
 
+    def rotate(self, x_angle, y_angle, z_angle, center=None):
+        # find M = R^-1 * T * R
+        # R is the rotation matrix, it saves the rotation state of the window
+        # T is the matrix of the rotation that is being applied
+        matrix = Object.generate_rotation_matrix(x_angle, y_angle, z_angle)
+        matrix = np.dot(self.inv_rotation_matrix, matrix)
+        matrix = np.dot(matrix, self._rotation_matrix)
+        self._transform(matrix.tolist())
+        # update rotation matrix
+        self._rotation_matrix = np.dot(self._rotation_matrix, matrix)
+
     def clip(self, _):
         pass
 
@@ -261,9 +307,9 @@ class Curve(Object):
 
     def __init__(self, points, name=None, color=None):
         curve = Curve._generate_curve(points)
-        curve.append(points[-1])  # add stub point for clipping
+        curve.append(curve[-1])  # add stub point for clipping
         super().__init__(
-            points=curve, name=name, color=color)
+            points=[curve], name=name, color=color)
 
     @staticmethod
     def _generate_curve(points):
@@ -278,20 +324,23 @@ class Curve(Object):
         step = 0.02
         x_points = [f(t, 0) for t in np.arange(0, 1+step, step)]
         y_points = [f(t, 1) for t in np.arange(0, 1+step, step)]
+        z_points = [f(t, 2) for t in np.arange(0, 1+step, step)]
 
-        return list(zip(x_points, y_points))
+        return list(zip(x_points, y_points, z_points))
 
 
 class Spline(Object):
     """ A Spline curve with arbitrary amount of control points. """
 
     def __init__(self, points, name=None, color=None):
-        curve = []
+        curves = []
         for i in range(len(points) - 3):
             # build a curve for every four control points
-            curve += Spline._generate_curve(points[i:i+4])
+            curve = Spline._generate_curve(points[i:i+4])
+            curve.append(curve[-1])  # add stub point for clipping
+            curves.append(curve)
         super().__init__(
-            points=curve, name=name, color=color)
+            points=curves, name=name, color=color)
 
     @staticmethod
     def _generate_curve(points):
