@@ -235,7 +235,6 @@ class Window(Object):
     """
 
     BORDER = 0.05
-    COP_DISTANCE = 300
 
     def __init__(self, width, height):
         points = [
