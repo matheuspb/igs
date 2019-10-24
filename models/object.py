@@ -122,8 +122,13 @@ class Object:
             center)
 
     def project(self):
-        """ Projects the 3D objects to 2D. Using parallel projection. """
-        self._points = [[point[:2] for point in face] for face in self._points]
+        """ Projects the 3D objects to 2D. Using perspective projection. """
+        def _project(point):
+            return (
+                point[0]/(point[2]/Window.COP_DISTANCE+1),
+                point[1]/(point[2]/Window.COP_DISTANCE+1))
+
+        self._points = [list(map(_project, face)) for face in self._points]
 
     def clip(self, window):
         """ Weiler-Atherton polygon clipping algorithm. """

@@ -4,7 +4,7 @@ from enum import Enum
 from gi.repository import Gtk
 import numpy as np
 
-from models.object import Curve, Object, Spline
+from models.object import Curve, Object, Spline, Window
 from models.world import World
 from .dialog import EntryDialog
 
@@ -42,8 +42,8 @@ class MainWindow:
             "on_button_down_clicked": lambda _: self._move_object(0, -1, 0),
             "on_button_left_clicked": lambda _: self._move_object(-1, 0, 0),
             "on_button_right_clicked": lambda _: self._move_object(1, 0, 0),
-            "on_button_in_clicked": lambda _: self._move_object(0, 0, -1),
-            "on_button_out_clicked": lambda _: self._move_object(0, 0, 1),
+            "on_button_in_clicked": lambda _: self._move_object(0, 0, 1),
+            "on_button_out_clicked": lambda _: self._move_object(0, 0, -1),
             "on_zoom_in": lambda _: self._zoom_object(zoom_in=True),
             "on_zoom_out": lambda _: self._zoom_object(zoom_in=False),
             "on_button_rotate_right_clicked":
@@ -56,6 +56,7 @@ class MainWindow:
             "on_create_wireframe": self._create_wireframe,
             "on_create_curve": self._create_curve,
             "on_create_spline": self._create_spline,
+            "update_perspective": self._update_perspective,
         }
         self._builder.connect_signals(handlers)
         self._builder.get_object("viewport").set_size_request(
@@ -82,6 +83,8 @@ class MainWindow:
 
     def show(self):
         """ Shows all window widgets. """
+        Window.COP_DISTANCE = \
+            self._builder.get_object("perspective_scale").get_value()
         self._builder.get_object("main_window").show_all()
 
     def _on_draw(self, _, ctx):
@@ -212,3 +215,7 @@ class MainWindow:
                 Spline(dialog.points, dialog.name, dialog.color))
             self._store.append([dialog.name])
         dialog.destroy()
+
+    @_Decorators.needs_redraw
+    def _update_perspective(self, scale):
+        Window.COP_DISTANCE = scale.get_value()
